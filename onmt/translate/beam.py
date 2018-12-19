@@ -93,6 +93,8 @@ class Beam(object):
         * `word_probs`- probs of advancing from the last step (K x words)
         * `attn_out`- attention at the last step
         * `current_beam`- the details from the current beam (empty if first step)
+            - This is used for debugging purposes, and so we can calculate 
+            Hamming distance between candidates (WILL BE IMPLEMENTED LATER)
 
         Returns: True if beam search is complete.
         """
@@ -185,7 +187,7 @@ class Beam(object):
 
             ## Keeps track of number of candidates from the same candidate on previous beam
             prev_beam_counts = dict()
-            for b in current_beam[0]:
+            for b in self.size:
                 prev_beam_counts[b] = 0
 
             sn = []
