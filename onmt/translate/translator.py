@@ -111,6 +111,8 @@ class Translator(object):
 
         self.use_filter_pred = False
 
+        self.hamming_dist=opt.hamming_dist
+
         # for debugging
         self.beam_trace = self.dump_beam != ""
         self.beam_accum = None
@@ -195,54 +197,107 @@ class Translator(object):
         all_scores = []
         all_predictions = []
 
+        prev_hyps = []
+
         for batch in data_iter:
-            batch_data = self.translate_batch(
-                batch, data, attn_debug, fast=self.fast
-            )
-            translations = builder.from_batch(batch_data)
+            if opts.beam_iters == 1:
+                batch_data = self.translate_batch(
+                    batch, data, attn_debug, fast=self.fast
+                )
+                translations = builder.from_batch(batch_data)
 
-            for trans in translations:
-                all_scores += [trans.pred_scores[:self.n_best]]
-                pred_score_total += trans.pred_scores[0]
-                pred_words_total += len(trans.pred_sents[0])
-                if tgt is not None:
-                    gold_score_total += trans.gold_score
-                    gold_words_total += len(trans.gold_sent) + 1
+                for trans in translations:
+                    all_scores += [trans.pred_scores[:self.n_best]]
+                    pred_score_total += trans.pred_scores[0]
+                    pred_words_total += len(trans.pred_sents[0])
+                    if tgt is not None:
+                        gold_score_total += trans.gold_score
+                        gold_words_total += len(trans.gold_sent) + 1
 
-                n_best_preds = [" ".join(pred)
-                                for pred in trans.pred_sents[:self.n_best]]
-                all_predictions += [n_best_preds]
-                self.out_file.write('\n'.join(n_best_preds) + '\n')
-                self.out_file.flush()
+                    n_best_preds = [" ".join(pred)
+                                    for pred in trans.pred_sents[:self.n_best]]
+                    all_predictions += [n_best_preds]
+                    self.out_file.write('\n'.join(n_best_preds) + '\n')
+                    self.out_file.flush()
 
-                if self.verbose:
-                    sent_number = next(counter)
-                    output = trans.log(sent_number)
-                    if self.logger:
-                        self.logger.info(output)
-                    else:
+                    if self.verbose:
+                        sent_number = next(counter)
+                        output = trans.log(sent_number)
+                        if self.logger:
+                            self.logger.info(output)
+                        else:
+                            os.write(1, output.encode('utf-8'))
+
+                    if attn_debug:
+                        preds = trans.pred_sents[0]
+                        preds.append('</s>')
+                        attns = trans.attns[0].tolist()
+                        if self.data_type == 'text':
+                            srcs = trans.src_raw
+                        else:
+                            srcs = [str(item) for item in range(len(attns[0]))]
+                        header_format = "{:>10.10} " + "{:>10.7} " * len(srcs)
+                        row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
+                        output = header_format.format("", *srcs) + '\n'
+                        for word, row in zip(preds, attns):
+                            max_index = row.index(max(row))
+                            row_format = row_format.replace(
+                                "{:>10.7f} ", "{:*>10.7f} ", max_index + 1)
+                            row_format = row_format.replace(
+                                "{:*>10.7f} ", "{:>10.7f} ", max_index)
+                            output += row_format.format(word, *row) + '\n'
+                            row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
 
-                if attn_debug:
-                    preds = trans.pred_sents[0]
-                    preds.append('</s>')
-                    attns = trans.attns[0].tolist()
-                    if self.data_type == 'text':
-                        srcs = trans.src_raw
-                    else:
-                        srcs = [str(item) for item in range(len(attns[0]))]
-                    header_format = "{:>10.10} " + "{:>10.7} " * len(srcs)
-                    row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
-                    output = header_format.format("", *srcs) + '\n'
-                    for word, row in zip(preds, attns):
-                        max_index = row.index(max(row))
-                        row_format = row_format.replace(
-                            "{:>10.7f} ", "{:*>10.7f} ", max_index + 1)
-                        row_format = row_format.replace(
-                            "{:*>10.7f} ", "{:>10.7f} ", max_index)
-                        output += row_format.format(word, *row) + '\n'
-                        row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
-                    os.write(1, output.encode('utf-8'))
+            else:
+                for i in range(beam_iters):
+                    batch_data = self.translate_batch(
+                        batch, data, attn_debug, fast=self.fast
+                    )
+                    translations = builder.from_batch(batch_data)
+
+                    for trans in translations:
+                        all_scores += [trans.pred_scores[:self.n_best]]
+                        pred_score_total += trans.pred_scores[0]
+                        pred_words_total += len(trans.pred_sents[0])
+                        if tgt is not None:
+                            gold_score_total += trans.gold_score
+                            gold_words_total += len(trans.gold_sent) + 1
+
+                        n_best_preds = [" ".join(pred)
+                                        for pred in trans.pred_sents[:self.n_best]]
+                        all_predictions += [n_best_preds]
+                        self.out_file.write('\n'.join(n_best_preds) + '\n')
+                        self.out_file.flush()
+
+                        if self.verbose:
+                            sent_number = next(counter)
+                            output = trans.log(sent_number)
+                            if self.logger:
+                                self.logger.info(output)
+                            else:
+                                os.write(1, output.encode('utf-8'))
+
+                        if attn_debug:
+                            preds = trans.pred_sents[0]
+                            preds.append('</s>')
+                            attns = trans.attns[0].tolist()
+                            if self.data_type == 'text':
+                                srcs = trans.src_raw
+                            else:
+                                srcs = [str(item) for item in range(len(attns[0]))]
+                            header_format = "{:>10.10} " + "{:>10.7} " * len(srcs)
+                            row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
+                            output = header_format.format("", *srcs) + '\n'
+                            for word, row in zip(preds, attns):
+                                max_index = row.index(max(row))
+                                row_format = row_format.replace(
+                                    "{:>10.7f} ", "{:*>10.7f} ", max_index + 1)
+                                row_format = row_format.replace(
+                                    "{:*>10.7f} ", "{:>10.7f} ", max_index)
+                                output += row_format.format(word, *row) + '\n'
+                                row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
+                            os.write(1, output.encode('utf-8'))
 
         if self.report_score:
             msg = self._report_score('PRED', pred_score_total,
@@ -277,7 +332,7 @@ class Translator(object):
                       codecs.open(self.dump_beam, 'w', 'utf-8'))
         return all_scores, all_predictions
 
-    def translate_batch(self, batch, data, attn_debug, fast=False):
+    def translate_batch(self, batch, data, attn_debug, fast=False, prev_hyps=[]):
         """
         Translate a batch of sentences.
 
@@ -301,7 +356,7 @@ class Translator(object):
                     n_best=self.n_best,
                     return_attention=attn_debug or self.replace_unk)
             else:
-                return self._translate_batch(batch, data)
+                return self._translate_batch(batch, data, prev_hyps)
 
     def _run_encoder(self, batch, data_type):
         src = inputters.make_features(batch, 'src', data_type)
@@ -587,7 +642,7 @@ class Translator(object):
 
         return results
 
-    def _translate_batch(self, batch, data):
+    def _translate_batch(self, batch, data, prev_hyps = []):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -608,7 +663,9 @@ class Translator(object):
                                     min_length=self.min_length,
                                     stepwise_penalty=self.stepwise_penalty,
                                     block_ngram_repeat=self.block_ngram_repeat,
-                                    exclusion_tokens=exclusion_tokens)
+                                    exclusion_tokens=exclusion_tokens,
+                                    prev_hyps=prev_hyps
+                                    hamming_dist=self.hamming_dist)
                 for __ in range(batch_size)]
 
         # (1) Run the encoder on the src.

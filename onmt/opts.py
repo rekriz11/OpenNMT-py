@@ -609,6 +609,15 @@ def translate_opts(parser):
               help="""Using grayscale image can training
                        model faster and smaller""")
 
+    ## Decoding Options
+    group.add('--beam_iters', 'beam_iters',
+              type=int, default=-1,
+              help="Number of iterations to run beam search")
+    group.add('--hamming_dist', 'hamming_dist',
+              type=int, default=1,
+              help="Minimum distance necessary to not set probability to -infinity")
+    
+
 
 def add_md_help_argument(parser):
     """ md help parser """

@@ -23,7 +23,9 @@ class Beam(object):
                  min_length=0,
                  stepwise_penalty=False,
                  block_ngram_repeat=0,
-                 exclusion_tokens=set()):
+                 exclusion_tokens=set(),
+                 previous_hyps=[],
+                 hamming_dist=1):
 
         self.size = size
         self.tt = torch.cuda if cuda else torch
