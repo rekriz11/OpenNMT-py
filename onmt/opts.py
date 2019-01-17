@@ -613,6 +613,10 @@ def translate_opts(parser):
     group.add('--k_per_cand', '-k_per_cand',
               type=int, default=0,
               help='Number of candidates allowed per beam hypothesis')
+    group.add('--hamming_penalty', '-hamming_penalty',
+              type=float, default=0.0,
+              help='Hamming Penalty for overlapping candidates')
+
 
 
 def add_md_help_argument(parser):

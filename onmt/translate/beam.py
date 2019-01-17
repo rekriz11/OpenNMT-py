@@ -25,7 +25,8 @@ class Beam(object):
                  stepwise_penalty=False,
                  block_ngram_repeat=0,
                  exclusion_tokens=set(),
-                 k_per_cand=0):
+                 k_per_cand=0,
+                 hamming_penalty=0.0):
 
         self.size = size
         self.tt = torch.cuda if cuda else torch
@@ -68,9 +69,10 @@ class Beam(object):
         ## ADDED ARGUMENTS
         # Number of candidates per beam hypothesis
         self.k_per_cand = k_per_cand
+        self.hamming_penalty = hamming_penalty
 
         # Keeps track of the current beam
-        self.current_beam = []
+        self.current_beam_str = []
 
         # Vocab (for debugging)
         self.vocab = vocab
@@ -83,7 +85,7 @@ class Beam(object):
         "Get the backpointers for the current timestep."
         return self.prev_ks[-1]
 
-    def advance(self, word_probs, attn_out, current_beam):
+    def advance(self, word_probs, attn_out, current_beam_str, current_step):
         """
         Given prob over words for every last beam `wordLk` and attention
         `attn_out`: Compute and update the beam search.
@@ -92,7 +94,7 @@ class Beam(object):
 
         * `word_probs`- probs of advancing from the last step (K x words)
         * `attn_out`- attention at the last step
-        * `current_beam`- the details from the current beam (empty if first step)
+        * `current_beam_str`- the details from the current beam (empty if first step)
             - This is used for debugging purposes, and so we can calculate 
             Hamming distance between candidates (WILL BE IMPLEMENTED LATER)
 
@@ -140,128 +142,163 @@ class Beam(object):
                         beam_scores[j] = -10e20
         else:
             beam_scores = word_probs[0]
-        flat_beam_scores = beam_scores.view(-1)
+        scores = beam_scores.view(-1)
 
-        if current_beam == [] or self.k_per_cand == 0:
-            ## USE ORIGINAL CODE FOR FIRST STEP
-            best_scores, best_scores_id = flat_beam_scores.topk(self.size, 0,
+        ## USE ORIGINAL CODE FOR FIRST STEP
+        if current_step == 0 or (self.k_per_cand <= 0 and self.hamming_penalty <= 0.0):
+            best_scores, best_scores_id = scores.topk(self.size, 0,
                                                                 True, True)
-
-            self.all_scores.append(self.scores)
-            self.scores = best_scores
-
             # best_scores_id is flattened beam x word array, so calculate which
             # word and beam each score came from
             prev_k = best_scores_id / num_words
-            self.prev_ks.append(prev_k)
-            self.next_ys.append((best_scores_id - prev_k * num_words))
-            self.attn.append(attn_out.index_select(0, prev_k))
-            self.global_scorer.update_global_state(self)
-
-            for i in range(self.next_ys[-1].size(0)):
-                if self.next_ys[-1][i] == self._eos:
-                    global_scores = self.global_scorer.score(self, self.scores)
-                    s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
-
-            # End condition is when top-of-beam is EOS and no global score.
-            if self.next_ys[-1][0] == self._eos:
-                self.all_scores.append(self.scores)
-                self.eos_top = True
+            next_k = best_scores_id - prev_k * num_words
+        
         else:
-            ## ADDED CODE FOR DIVERSE BEAM SEARCH
-            scores, scores_id = flat_beam_scores.sort(0, descending=True)
-            prev_toks = scores_id / num_words
-            cur_toks = scores_id - prev_toks * num_words
+            scores, scores_id = scores.sort(0, descending=True)
+            prev_k = scores_id / num_words
+            next_k = scores_id - prev_k * num_words
 
-            '''
+            print(scores_id[:self.size])
+
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
-                toks = current_beam[0][prev_toks[i]].split(" ") + ["\t", self.vocab.itos[cur_toks[i].item()]]
-                ind = cur_toks[i].item()
+                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()
                 try:
-                   print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
                 except UnicodeEncodeError:
                     continue
-            '''
 
-            ## Keeps track of number of candidates from the same candidate on previous beam
-            prev_beam_counts = dict()
-            for b in self.size:
-                prev_beam_counts[b] = 0
+            ## ADDED CODE FOR DIVERSE BEAM SEARCH
+            if self.k_per_cand > 0:
+                ## Keeps track of number of candidates from the same candidate on previous beam
+                prev_beam_counts = dict()
+                for b in range(self.size):
+                    prev_beam_counts[b] = 0
 
-            sn = []
-            prev_toks2_temp = []
-            cur_toks2_temp = []
+                scores_temp = []
+                prev_k_temp = []
+                next_k_temp = []
+                for i in range(self.size):
+                    indices = ((prev_k == i).nonzero())[:self.k_per_cand]
 
-            
-            for i in range(len(current_beam[0])):
-                indices = ((prev_toks == i).nonzero())[:self.k_per_cand]
+                    for i in indices:
+                        scores_temp.append(scores[i].item())
+                        prev_k_temp.append(prev_k[i])
+                        next_k_temp.append(next_k[i])
 
-                for i in indices:
-                    sn.append(scores[i].item())
-                    prev_toks2_temp.append(prev_toks[i])
-                    cur_toks2_temp.append(cur_toks[i])
 
-            sn = numpy.array(sn, dtype='double')
-            sn = torch.from_numpy(sn).double().cuda()
+                scores_temp = numpy.array(scores_temp, dtype='double')
+                scores_temp = torch.from_numpy(scores_temp).double().cuda()
 
-            scores2, scores_id2 = sn.sort(0, descending=True)
-            prev_toks2 = numpy.array([prev_toks2_temp[i].item() for i in scores_id2], dtype='int32')
-            prev_toks2 = torch.from_numpy(prev_toks2).cuda()
+                ####### FOR DEBUGGING (DELETE LATER)
+                scores, scores_id = scores_temp.sort(0, descending=True)
+                prev_k = numpy.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')
+                prev_k = torch.from_numpy(prev_k).type(torch.LongTensor).cuda()
 
-            cur_toks2 = numpy.array([cur_toks2_temp[i].item() for i in scores_id2], dtype='int32')
-            cur_toks2 = torch.from_numpy(cur_toks2).cuda()
+                next_k = numpy.array([next_k_temp[i].item() for i in scores_id], dtype='int32')
+                next_k = torch.from_numpy(next_k).type(torch.LongTensor).cuda()
 
-            '''
-            print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
-            for i in range(len(prev_toks2)):
-                toks = current_beam[0][prev_toks2[i]].split(" ") + ["\t", self.vocab.itos[cur_toks2[i].item()]]
-                ind = cur_toks[i].item()
+                print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
+                for i in range(len(prev_k)):
+                    toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                    ind = next_k[i].item()
+                    try:
+                       print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                    except UnicodeEncodeError:
+                        continue
+                #######
+
+            ## Penalizes each step for how similar it is to previous candidates
+            if self.hamming_penalty > 0.0:
+
+                ## Saves counts of words seen in candidates so far
+                word_counts = dict()
+                prev_beam_counts = dict()
+                for b in range(self.size):
+                    prev_beam_counts[b] = 0
+                
+                scores_temp = []
+                prev_k_temp = []
+                next_k_temp = []
+
+                scores_orig = []
+                score_ids_orig = []
+
+                for i in range(len(scores)):
+                    if prev_beam_counts[prev_k[i].item()] < self.size:
+                        toks = current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
+
+                        c = 0
+                        for tok in toks:
+                            try:
+                                c += word_counts[tok]
+                            except KeyError:
+                                continue
+                        prev_beam_counts[prev_k[i].item()] += 1
+
+                        scores_temp.append(scores[i] - self.hamming_penalty*c)
+                        scores_orig.append(scores[i])
+                        score_ids_orig.append(scores_id[i])
+
+                        ## Keeps track of word counts for the next candidates
+                        for tok in toks:
+                            try:
+                                word_counts[tok] += 1
+                            except KeyError:
+                                word_counts[tok] = 1
+                    else:
+                        key_min = min(prev_beam_counts.keys(), key=(lambda k: prev_beam_counts[k]))
+                        if prev_beam_counts[key_min] == self.size:
+                            break
+
+                scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
+
+            best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
+
+            ## Saves previous and current indices
+            if current_step != 0:
+                if self.k_per_cand > 0 and self.hamming_penalty <= 0.0:
+                    prev_k = numpy.array([prev_k[i].item() for i in best_scores_id], dtype='int32')
+                    prev_k = torch.from_numpy(prev_k).type(torch.LongTensor).cuda()
+                    next_k = numpy.array([next_k[i].item() for i in best_scores_id], dtype='int32')
+                    next_k = torch.from_numpy(next_k).type(torch.LongTensor).cuda()
+                elif self.hamming_penalty > 0.0:
+                    best_id_orig = numpy.array([score_ids_orig[i].item() for i in best_scores_id], dtype='int32')
+                    best_id_orig = torch.from_numpy(best_id_orig).type(torch.LongTensor).cuda()
+                    print(best_id_orig)
+                    prev_k = best_id_orig / num_words
+                    next_k = best_id_orig - prev_k * num_words
+
+                    best_scores = numpy.array([scores_orig[i] for i in best_scores_id], dtype='double')
+                    best_scores = torch.from_numpy(best_scores).cuda()
+
+            print("\nBEAM AFTER ALL DIVERSITY:")
+            for i in range(self.size):
+                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()
                 try:
-                   print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores2[i].item()))
-                except UnicodeEncodeError:
-                    continue 
-            '''
-
-            best_scores, best_scores_id = scores2.topk(self.size, 0, True, True)
-            prev_k = numpy.array([prev_toks2[i].item() for i in best_scores_id], dtype='int32')
-            prev_k = torch.from_numpy(prev_k).type(torch.LongTensor).cuda()
-            next_k = numpy.array([cur_toks2[i].item() for i in best_scores_id], dtype='int32')
-            next_k = torch.from_numpy(next_k).type(torch.LongTensor).cuda()
-
-            '''
-            print("\nFINAL BEAM FOR NEXT STEP: ")
-            for i in range(len(prev_k)):
-                toks = current_beam[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
-                ind = cur_toks[i].item()
-                try:
-                   print(" ".join(toks) + "\t" + str(ind) + "\t" + str(best_scores[i].item()))
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(best_scores[i].item()))
                 except UnicodeEncodeError:
                     continue
-            '''
-            
+
+        self.all_scores.append(self.scores)
+        self.scores = best_scores
+
+        self.prev_ks.append(prev_k)
+        self.next_ys.append(next_k)
+        self.attn.append(attn_out.index_select(0, prev_k))
+        self.global_scorer.update_global_state(self)
+        for i in range(self.next_ys[-1].size(0)):
+            if self.next_ys[-1][i] == self._eos:
+                global_scores = self.global_scorer.score(self, self.scores)
+                s = global_scores[i]
+                self.finished.append((s, len(self.next_ys) - 1, i))
+
+        # End condition is when top-of-beam is EOS and no global score.
+        if self.next_ys[-1][0] == self._eos:
             self.all_scores.append(self.scores)
-            self.scores = best_scores
-
-            # best_scores_id is flattened beam x word array, so calculate which
-            # word and beam each score came from
-            self.prev_ks.append(prev_k)
-            self.next_ys.append(next_k)
-
-            self.attn.append(attn_out.index_select(0, prev_k))
-            self.global_scorer.update_global_state(self)
-
-            for i in range(self.next_ys[-1].size(0)):
-                if self.next_ys[-1][i] == self._eos:
-                    global_scores = self.global_scorer.score(self, self.scores)
-                    s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
-
-            # End condition is when top-of-beam is EOS and no global score.
-            if self.next_ys[-1][0] == self._eos:
-                self.all_scores.append(self.scores)
-                self.eos_top = True
+            self.eos_top = True
 
     def done(self):
         return self.eos_top and len(self.finished) >= self.n_best
@@ -282,14 +319,14 @@ class Beam(object):
         return scores, ks
 
     ## ADDED CODE: Gets current beam (without changing output)
-    def get_current_beam(self, beam_size):
-        prev_beam = list(self.current_beam)
-        self.current_beam = []
+    def get_current_beam_str(self, beam_size):
+        prev_beam = list(self.current_beam_str)
+        self.current_beam_str = []
 
         ## Keeps all candidates from previous beam if they are finished
         for (s, step, rank, fin) in prev_beam:
             if fin:
-                self.current_beam.append((s, step, rank, fin))
+                self.current_beam_str.append((s, step, rank, fin))
 
         ## Adds all candidates from current beam, even if they are not finished
         for i in range(beam_size):
@@ -301,13 +338,13 @@ class Beam(object):
             else:
                 fin = False
 
-            self.current_beam.append((s, len(self.next_ys) - 1, i, fin))
+            self.current_beam_str.append((s, len(self.next_ys) - 1, i, fin))
 
         ## Sorts the beam
-        self.current_beam.sort(key=lambda a: -a[0])
-        scores = [sc for sc, _, _, _ in self.current_beam]
-        ks = [(t, k) for _, t, k, _ in self.current_beam]
-        fins = [f for _, _, _, f in self.current_beam]
+        self.current_beam_str.sort(key=lambda a: -a[0])
+        scores = [sc for sc, _, _, _ in self.current_beam_str]
+        ks = [(t, k) for _, t, k, _ in self.current_beam_str]
+        fins = [f for _, _, _, f in self.current_beam_str]
         return scores, ks, fins
 
     def get_hyp(self, timestep, k):

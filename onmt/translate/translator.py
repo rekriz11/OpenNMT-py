@@ -123,6 +123,7 @@ class Translator(object):
 
         ## ADDED ARGUMENTS!
         self.k_per_cand = opt.k_per_cand
+        self.hamming_penalty = opt.hamming_penalty
 
     ## Gets current beam
     def debug_translation(self, batch_data, builder, fins):
@@ -637,7 +638,8 @@ class Translator(object):
                                     block_ngram_repeat=self.block_ngram_repeat,
                                     exclusion_tokens=exclusion_tokens,
                                     vocab=vocab,
-                                    k_per_cand=self.k_per_cand)
+                                    k_per_cand=self.k_per_cand,
+                                    hamming_penalty=self.hamming_penalty)
                 for __ in range(batch_size)]
 
         # (1) Run the encoder on the src.
@@ -694,10 +696,10 @@ class Translator(object):
             select_indices_array = []
             # Loop over the batch_size number of beam
             for j, b in enumerate(beam):
-                #print("STEP: " + str(i))
+                print("STEP: " + str(i))
                 if i == 0:
                     b.advance(out[j, :],
-                              beam_attn.data[j, :, :memory_lengths[j]], [])
+                              beam_attn.data[j, :, :memory_lengths[j]], [], 0)
                     select_indices_array.append(
                         b.get_current_origin() + j * beam_size)
                 else:
@@ -713,7 +715,7 @@ class Translator(object):
                     '''
 
                     b.advance(out[j, :],
-                              beam_attn.data[j, :, :memory_lengths[j]], current_beam)
+                              beam_attn.data[j, :, :memory_lengths[j]], current_beam, 1)
                     select_indices_array.append(
                         b.get_current_origin() + j * beam_size)
 
@@ -743,7 +745,7 @@ class Translator(object):
                "attention": []}
         for b in beam:
             n_best = self.n_best
-            scores, ks, fins = b.get_current_beam(self.beam_size)
+            scores, ks, fins = b.get_current_beam_str(self.beam_size)
             hyps, attn = [], []
             for i, (times, k) in enumerate(ks[:n_best]):
                 hyp, att = b.get_hyp(times, k)
