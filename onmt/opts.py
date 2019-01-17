@@ -540,6 +540,9 @@ def translate_opts(parser):
                        this before computing softmax during decoding.""")
     group.add('--seed', '-seed', type=int, default=829,
               help="Random seed")
+    group.add('--hidden_state_noise', '-hidden_state_noise', 
+              default=0.0, type=float,
+              help='Sigma as described in NPAD paper.')
 
     group = parser.add_argument_group('Beam')
     group.add('--fast', '-fast', action="store_true",
