@@ -7,7 +7,6 @@ import configargparse
 
 import os
 import glob
-import random
 from itertools import chain
 
 import torch
@@ -18,7 +17,6 @@ from onmt.inputters.inputter import build_dataset_iter, \
     load_old_vocab, old_style_vocab
 from onmt.model_builder import build_model
 from onmt.utils.optimizers import Optimizer
-from onmt.utils.misc import set_random_seed
 from onmt.utils.misc import set_random_seed
 from onmt.trainer import build_trainer
 from onmt.models import build_model_saver
