@@ -761,7 +761,7 @@ class Translator(object):
                     if "tgt" in batch.__dict__:
                         ret2["gold_score"] = self._run_target(batch, data)
                     ret2["batch"] = batch
-                    current_beam = self.debug_translation(ret2, builder, fins)
+                    current_beam = self.debug_translation(ret2, builder, fins)[0]
                 print("\nCURRENT BEAM:")
                 print(current_beam)
                 new_hyps += current_beam
