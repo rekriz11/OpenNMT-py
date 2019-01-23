@@ -191,7 +191,7 @@ class Beam(object):
                     toks = " ".join(current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
                 print(toks)
-                if toks in prev_hyps:
+                if toks in prev_hyps or toks == '<unk>':
                     scores_temp.append(-1e20)
                 else:
                     print(toks)
