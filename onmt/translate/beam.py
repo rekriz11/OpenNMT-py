@@ -158,20 +158,6 @@ class Beam(object):
             if self.next_ys[-1][0] == self._eos:
                 self.all_scores.append(self.scores)
                 self.eos_top = True
-
-            #### FOR DEBUGGING (DELETE LATER)
-            print("\nORIGINAL BEAM (NO CHANGES): ")
-            for i in range(self.size):
-                if current_step == 0:
-                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
-                else:
-                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
-                ind = next_k[i].item()   
-                try:
-                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(best_scores[i].item()))
-                except UnicodeEncodeError:
-                    continue
-            ####
         else:
             scores, scores_id = flat_beam_scores.sort(0, descending=True)
             prev_k = scores_id / num_words
