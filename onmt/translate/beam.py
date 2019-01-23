@@ -163,6 +163,7 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
@@ -176,6 +177,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
+            '''
 
             ## Removes all candidates already found in a previous beam search
             scores_temp = []
@@ -206,6 +208,7 @@ class Beam(object):
             prev_k = torch.from_numpy(numpy.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(numpy.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
             for i in range(len(prev_k)):
@@ -219,6 +222,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
+            '''
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
