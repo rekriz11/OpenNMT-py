@@ -94,7 +94,7 @@ class Translator(object):
         self.sample_from_topk = opt.random_sampling_topk
         self.num_random_samples = opt.num_random_samples
         if self.num_random_samples > 1:
-          print('Settings n_best to num_random_samples')
+          print('Setting n_best to num_random_samples')
           self.n_best = self.num_random_samples
         self.hidden_state_noise = opt.hidden_state_noise
 
@@ -211,6 +211,7 @@ class Translator(object):
 
         json_dump = []
 
+        # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
         for batch in data_iter:
             batch_data = self.translate_batch(
@@ -226,11 +227,9 @@ class Translator(object):
                     gold_score_total += trans.gold_score
                     gold_words_total += len(trans.gold_sent) + 1
 
-                # n_best_preds = [" ".join(pred)
-                                # for pred in trans.pred_sents[:self.n_best]]
-                # all_predictions += [n_best_preds]
-                # self.out_file.write('\n'.join(n_best_preds) + '\n')
-                # self.out_file.flush()
+                n_best_preds = [" ".join(pred)
+                                for pred in trans.pred_sents[:self.n_best]]
+                all_predictions += [n_best_preds]
 
                 json_dump.append({
                     'gt': trans.src_raw,
@@ -386,60 +385,60 @@ class Translator(object):
             mb_device = memory_bank.device
 
         for sample_index in range(num_random_samples):
-          self.model.decoder.init_state(src, memory_bank, enc_states)
+            self.model.decoder.init_state(src, memory_bank, enc_states)
 
-          # seq_so_far contains chosen tokens; on each step, dim 1 grows by one.
-          seq_so_far = torch.full(
-              [batch_size, 1], start_token, dtype=torch.long, device=mb_device)
-          alive_attn = None
+            # seq_so_far contains chosen tokens; on each step, dim 1 grows by one.
+            seq_so_far = torch.full(
+                [batch_size, 1], start_token, dtype=torch.long, device=mb_device)
+            alive_attn = None
 
-          for step in range(max_length):
-              decoder_input = seq_so_far[:, -1].view(1, -1, 1)
+            for step in range(max_length):
+                decoder_input = seq_so_far[:, -1].view(1, -1, 1)
 
-              log_probs, attn = self._decode_and_generate(
-                  decoder_input,
-                  memory_bank,
-                  batch,
-                  data,
-                  memory_lengths=memory_lengths,
-                  src_map=src_map,
-                  step=step,
-                  batch_offset=torch.arange(batch_size, dtype=torch.long)
-              )
+                log_probs, attn = self._decode_and_generate(
+                    decoder_input,
+                    memory_bank,
+                    batch,
+                    data,
+                    memory_lengths=memory_lengths,
+                    src_map=src_map,
+                    step=step,
+                    batch_offset=torch.arange(batch_size, dtype=torch.long)
+                )
 
-              if step < min_length:
-                  log_probs[:, end_token] = -1e20
+                if step < min_length:
+                    log_probs[:, end_token] = -1e20
 
-              # Note that what this code calls log_probs are actually logits.
-              topk_ids, topk_scores = self.sample_with_temperature(
-                      log_probs, sampling_temp, keep_topk)
+                # Note that what this code calls log_probs are actually logits.
+                topk_ids, topk_scores = self.sample_with_temperature(
+                        log_probs, sampling_temp, keep_topk)
 
-              # Append last prediction.
-              seq_so_far = torch.cat([seq_so_far, topk_ids.view(-1, 1)], -1)
-              if return_attention:
-                  current_attn = attn
-                  if alive_attn is None:
-                      alive_attn = current_attn
-                  else:
-                      alive_attn = torch.cat([alive_attn, current_attn], 0)
+                # Append last prediction.
+                seq_so_far = torch.cat([seq_so_far, topk_ids.view(-1, 1)], -1)
+                if return_attention:
+                    current_attn = attn
+                    if alive_attn is None:
+                        alive_attn = current_attn
+                    else:
+                        alive_attn = torch.cat([alive_attn, current_attn], 0)
 
-          predictions = seq_so_far.view(-1, 1, seq_so_far.size(-1))
-          attention = (
-              alive_attn.view(
-                  alive_attn.size(0), -1, 1, alive_attn.size(-1))
-              if alive_attn is not None else None)
+            predictions = seq_so_far.view(-1, 1, seq_so_far.size(-1))
+            attention = (
+                alive_attn.view(
+                    alive_attn.size(0), -1, 1, alive_attn.size(-1))
+                if alive_attn is not None else None)
 
-          for i in range(topk_scores.size(0)):
-              # Store finished hypotheses for this batch. Unlike in beam search,
-              # there will only ever be 1 hypothesis per example.
-              score = topk_scores[i, 0]
-              pred = predictions[i, 0, 1:]  # Ignore start_token.
-              m_len = memory_lengths[i]
-              attn = attention[:, i, 0, :m_len] if attention is not None else []
+            for i in range(topk_scores.size(0)):
+                # Store finished hypotheses for this batch. Unlike in beam search,
+                # there will only ever be 1 hypothesis per example.
+                score = topk_scores[i, 0]
+                pred = predictions[i, 0, 1:]  # Ignore start_token.
+                m_len = memory_lengths[i]
+                attn = attention[:, i, 0, :m_len] if attention is not None else []
 
-              results["scores"][i].append(score)
-              results["predictions"][i].append(pred)
-              results["attention"][i].append(attn)
+                results["scores"][i].append(score)
+                results["predictions"][i].append(pred)
+                results["attention"][i].append(attn)
 
         return results
 
