@@ -171,7 +171,7 @@ class Beam(object):
                 if current_step == 0:
                     toks = ["\t", self.vocab.itos[next_k[i].item()]]
                 else:
-                    toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()   
                 try:
                     print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
@@ -220,7 +220,7 @@ class Beam(object):
                 if current_step == 0:
                     toks = ["\t", self.vocab.itos[next_k[i].item()]]
                 else:
-                    toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()
                 try:
                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(best_scores[i].item()))
