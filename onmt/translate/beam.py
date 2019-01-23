@@ -163,9 +163,6 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
-            print("PREVIOUS HYPOTHESES")
-            print(prev_hyps)
-
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
