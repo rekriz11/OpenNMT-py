@@ -70,7 +70,7 @@ python3 /data2/the_beamers/OpenNMT-reno/translate.py \
 -src /data2/the_beamers/data/test/test_input.txt \
 -output /data2/the_beamers/data/output_reno/test_output_5beam_10iter.txt \
 -beam_size 5 \
--n_best 1 \
+-n_best 5 \
 -max_length 50 \
 -block_ngram_repeat 1 \
 -replace_unk \
