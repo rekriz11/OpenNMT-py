@@ -183,6 +183,7 @@ class Beam(object):
             ## Removes all candidates already found in a previous beam search
             scores_temp = []
             prev_k_temp = []
+            next_k_temp = []
 
             non_dups = 0
             for i in range(len(scores)):
