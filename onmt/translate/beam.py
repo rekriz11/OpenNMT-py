@@ -168,7 +168,6 @@ class Beam(object):
 
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
-                print(current_beam_str)
                 if current_step == 0:
                     toks = ["\t", self.vocab.itos[next_k[i].item()]]
                 else:
@@ -182,13 +181,20 @@ class Beam(object):
 
             ## Removes all candidates already found in a previous beam search
             scores_temp = []
-            for i in range(scores):
+
+            non_dups = 0
+            for i in range(len(scores)):
                 toks = current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
 
                 if toks in prev_hyps:
                     scores_temp.append(-1e20)
                 else:
                     scores_temp.append(scores[i])
+                    non_dups += 1
+
+                    if non_dups >= self.size:
+                        break
+
             scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
 
             best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
