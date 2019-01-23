@@ -204,7 +204,7 @@ class Translator(object):
 
             if self.beam_iters == 1:
                 batch_data = self.translate_batch(
-                    batch, data, attn_debug, fast=self.fast
+                    batch, data, attn_debug, fast=self.fast, prev_hyps=self.prev_hyps
                 )
                 translations = builder.from_batch(batch_data)
 

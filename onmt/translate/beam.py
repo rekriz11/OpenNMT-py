@@ -24,7 +24,7 @@ class Beam(object):
                  stepwise_penalty=False,
                  block_ngram_repeat=0,
                  exclusion_tokens=set(),
-                 previous_hyps=[],
+                 prev_hyps=[],
                  hamming_dist=1):
 
         self.size = size
