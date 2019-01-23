@@ -190,11 +190,18 @@ class Beam(object):
                 else:
                     toks = " ".join(current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
+                print(toks)
                 if toks in prev_hyps:
                     scores_temp.append(-1e20)
                 else:
+                    print(toks)
+                    print(prev_hyps[:10])
                     scores_temp.append(scores[i])
                     non_dups += 1
+
+                    if non_dups >= 10:
+                        scores_temp += scores[i+1:]
+                        break
 
             scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
             print(scores[:100])
