@@ -611,7 +611,7 @@ def translate_opts(parser):
 
     ## Decoding Options
     group.add('--beam_iters', 'beam_iters',
-              type=int, default=-1,
+              type=int, default=1,
               help="Number of iterations to run beam search")
     group.add('--hamming_dist', 'hamming_dist',
               type=int, default=1,
