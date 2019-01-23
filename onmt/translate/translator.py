@@ -197,9 +197,10 @@ class Translator(object):
         all_scores = []
         all_predictions = []
 
-        prev_hyps = []
-
         for batch in data_iter:
+            ## Reinitialize previous hypotheses
+            self.prev_hyps = []
+
             if opts.beam_iters == 1:
                 batch_data = self.translate_batch(
                     batch, data, attn_debug, fast=self.fast
@@ -252,7 +253,7 @@ class Translator(object):
             else:
                 for i in range(beam_iters):
                     batch_data = self.translate_batch(
-                        batch, data, attn_debug, fast=self.fast
+                        batch, data, attn_debug, fast=self.fast, prev_hyps=self.prev_hyps
                     )
                     translations = builder.from_batch(batch_data)
 
@@ -642,7 +643,7 @@ class Translator(object):
 
         return results
 
-    def _translate_batch(self, batch, data, prev_hyps = []):
+    def _translate_batch(self, batch, data, prev_hyps):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -720,12 +721,33 @@ class Translator(object):
 
             # (c) Advance each beam.
             select_indices_array = []
+
+            # Saves new hypotheses
+            new_hyps = []
+
             # Loop over the batch_size number of beam
             for j, b in enumerate(beam):
+                ## Gets previous beam
+                current_beam = []
+                if i > 0:
+                    ret2, fins = self._from_current_beam(beam)
+                    ret2["gold_score"] = [0] * batch_size
+                    if "tgt" in batch.__dict__:
+                        ret2["gold_score"] = self._run_target(batch, data)
+                    ret2["batch"] = batch
+                    current_beam = self.debug_translation(ret2, builder, fins)
+                    print("\nCURRENT BEAM:")
+                    print(current_beam)
+
+                    new_hyps.append(current_beam)
+
+
                 b.advance(out[j, :],
-                          beam_attn.data[j, :, :memory_lengths[j]])
+                          beam_attn.data[j, :, :memory_lengths[j]], current_beam, i, prev_hyps)
                 select_indices_array.append(
                     b.get_current_origin() + j * beam_size)
+
+            self.prev_hyps += new_hyps
             select_indices = torch.cat(select_indices_array)
 
             self.model.decoder.map_state(
@@ -744,6 +766,24 @@ class Translator(object):
             results["attention"].append(attn)
 
         return results
+
+    ## ADDED CODE: gets current beam
+    def _from_current_beam(self, beam):
+        ret = {"predictions": [],
+               "scores": [],
+               "attention": []}
+        for b in beam:
+            n_best = self.n_best
+            scores, ks, fins = b.get_current_beam_str(self.beam_size)
+            hyps, attn = [], []
+            for i, (times, k) in enumerate(ks[:n_best]):
+                hyp, att = b.get_hyp(times, k)
+                hyps.append(hyp)
+                attn.append(att)
+            ret["predictions"].append(hyps)
+            ret["scores"].append(scores)
+            ret["attention"].append(attn)
+        return ret, fins
 
     def _score_target(self, batch, memory_bank, src_lengths, data, src_map):
         tgt_in = inputters.make_features(batch, 'tgt')[:-1]
