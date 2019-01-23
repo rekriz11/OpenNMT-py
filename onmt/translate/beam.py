@@ -136,20 +136,6 @@ class Beam(object):
             best_scores, best_scores_id = flat_beam_scores.topk(self.size, 0,
                                                                 True, True)
 
-            #### FOR DEBUGGING (DELETE LATER)
-            print("\nORIGINAL BEAM (NO CHANGES): ")
-            for i in range(self.size):
-                if current_step == 0:
-                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
-                else:
-                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
-                ind = next_k[i].item()   
-                try:
-                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
-                except UnicodeEncodeError:
-                    continue
-            ####
-
             self.all_scores.append(self.scores)
             self.scores = best_scores
 
@@ -157,7 +143,8 @@ class Beam(object):
             # word and beam each score came from
             prev_k = best_scores_id / num_words
             self.prev_ks.append(prev_k)
-            self.next_ys.append((best_scores_id - prev_k * num_words))
+            next_k = (best_scores_id - prev_k * num_words)
+            self.next_ys.append(next_k)
             self.attn.append(attn_out.index_select(0, prev_k))
             self.global_scorer.update_global_state(self)
 
@@ -171,6 +158,20 @@ class Beam(object):
             if self.next_ys[-1][0] == self._eos:
                 self.all_scores.append(self.scores)
                 self.eos_top = True
+
+            #### FOR DEBUGGING (DELETE LATER)
+            print("\nORIGINAL BEAM (NO CHANGES): ")
+            for i in range(self.size):
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()   
+                try:
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                except UnicodeEncodeError:
+                    continue
+            ####
         else:
             scores, scores_id = flat_beam_scores.sort(0, descending=True)
             prev_k = scores_id / num_words
