@@ -191,7 +191,6 @@ class Beam(object):
                 if toks in prev_hyps or toks == '<unk>':
                     scores_temp.append(-1e20)
                 else:
-                    print(toks)
                     scores_temp.append(scores[i].item())
                     non_dups += 1
                     prev_k_temp.append(prev_k[i].item())
@@ -202,9 +201,6 @@ class Beam(object):
                         break
 
             scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
-            print(scores[:100])
-            print(prev_k_temp)
-            print(next_k_temp)
 
             best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
 
@@ -224,9 +220,6 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
-
-            print(prev_k)
-            print(next_k)
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
