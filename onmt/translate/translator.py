@@ -765,8 +765,6 @@ class Translator(object):
                         ret2["gold_score"] = self._run_target(batch, data)
                     ret2["batch"] = batch
                     current_beam = self.debug_translation(ret2, builder, fins)[0]
-                    print("\nCURRENT BEAM:")
-                    print(current_beam)
                 new_hyps += current_beam
 
                 b.advance(out[j, :],
@@ -778,9 +776,6 @@ class Translator(object):
 
             self.model.decoder.map_state(
                 lambda state, dim: state.index_select(dim, select_indices))
-
-        print("New hypotheses:")
-        print(new_hyps)
         self.prev_hyps += new_hyps
 
         # (4) Extract sentences from beam.
