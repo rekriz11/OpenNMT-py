@@ -17,7 +17,7 @@ class Beam(object):
        global_scorer (:obj:`GlobalScorer`)
     """
 
-    def __init__(self, size, pad, bos, eos,
+    def __init__(self, size, pad, bos, eos, vocab,
                  n_best=1, cuda=False,
                  global_scorer=None,
                  min_length=0,
@@ -66,6 +66,9 @@ class Beam(object):
         self.exclusion_tokens = exclusion_tokens
 
         self.current_beam_str = []
+        
+        # Vocab (for debugging)
+        self.vocab = vocab
 
     def get_current_state(self):
         "Get the outputs for the current timestep."
