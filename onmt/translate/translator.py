@@ -726,6 +726,9 @@ class Translator(object):
             memory_bank = tile(memory_bank, beam_size, dim=1)
         memory_lengths = tile(src_lengths, beam_size)
 
+        # Saves new hypotheses
+        new_hyps = []
+
         # (3) run the decoder to generate sentences, using beam search.
         for i in range(self.max_length):
             if all((b.done() for b in beam)):
@@ -748,9 +751,6 @@ class Translator(object):
             # (c) Advance each beam.
             select_indices_array = []
 
-            # Saves new hypotheses
-            new_hyps = []
-
             # Loop over the batch_size number of beam
             for j, b in enumerate(beam):
                 ## Gets previous beam
@@ -762,22 +762,21 @@ class Translator(object):
                         ret2["gold_score"] = self._run_target(batch, data)
                     ret2["batch"] = batch
                     current_beam = self.debug_translation(ret2, builder, fins)
-                    print("\nCURRENT BEAM:")
-                    print(current_beam)
-
-                    new_hyps.append(current_beam)
-
+                print("\nCURRENT BEAM:")
+                print(current_beam)
+                new_hyps += current_beam
 
                 b.advance(out[j, :],
                           beam_attn.data[j, :, :memory_lengths[j]], current_beam, i, prev_hyps)
                 select_indices_array.append(
                     b.get_current_origin() + j * beam_size)
 
-            self.prev_hyps += new_hyps
             select_indices = torch.cat(select_indices_array)
 
             self.model.decoder.map_state(
                 lambda state, dim: state.index_select(dim, select_indices))
+
+        self.prev_hyps += new_hyps
 
         # (4) Extract sentences from beam.
         for b in beam:
