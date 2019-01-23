@@ -294,9 +294,9 @@ class Translator(object):
                                         for pred in trans.pred_sents[:self.n_best]]
                         all_predictions += [n_best_preds]
                         if i == self.beam_iters - 1:
-                            self.out_file.write(n_best_preds[0] + '\n')
+                            self.out_file.write(n_best_preds[0] + '\n\n')
                         else:
-                            self.out_file.write(n_best_preds[0] + '\t')
+                            self.out_file.write(n_best_preds[0] + '\n')
                         self.out_file.flush()
 
                         if self.verbose:
