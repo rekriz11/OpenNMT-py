@@ -544,6 +544,9 @@ def translate_opts(parser):
     group.add('--hidden_state_noise', '-hidden_state_noise', 
               default=0.0, type=float,
               help='Sigma as described in NPAD paper.')
+    group.add('--num_random_samples', '-num_random_samples',
+              default=1, type=int,
+              help='Numnber of random samples to take for each example.')
 
     group = parser.add_argument_group('Beam')
     group.add('--fast', '-fast', action="store_true",
