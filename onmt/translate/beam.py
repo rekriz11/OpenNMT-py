@@ -66,7 +66,7 @@ class Beam(object):
         self.exclusion_tokens = exclusion_tokens
 
         self.current_beam_str = []
-        
+
         # Vocab (for debugging)
         self.vocab = vocab
 
@@ -168,6 +168,7 @@ class Beam(object):
 
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
+                print(current_beam_str)
                 toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()
                 try:
