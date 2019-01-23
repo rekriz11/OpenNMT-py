@@ -186,9 +186,9 @@ class Beam(object):
             non_dups = 0
             for i in range(len(scores)):
                 if current_step == 0:
-                    toks = [self.vocab.itos[next_k[i].item()]]
+                    toks = " ".join([self.vocab.itos[next_k[i].item()]])
                 else:
-                    toks = current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
+                    toks = " ".join(current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
                 if toks in prev_hyps:
                     scores_temp.append(-1e20)
