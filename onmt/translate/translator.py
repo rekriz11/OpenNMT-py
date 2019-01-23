@@ -774,6 +774,8 @@ class Translator(object):
             self.model.decoder.map_state(
                 lambda state, dim: state.index_select(dim, select_indices))
 
+        print("New hypotheses:")
+        print(new_hyps)
         self.prev_hyps += new_hyps
 
         # (4) Extract sentences from beam.
