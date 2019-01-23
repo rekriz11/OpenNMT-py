@@ -142,8 +142,10 @@ class Beam(object):
             # best_scores_id is flattened beam x word array, so calculate which
             # word and beam each score came from
             prev_k = best_scores_id / num_words
+            print(prev_k)
             self.prev_ks.append(prev_k)
             self.next_ys.append((best_scores_id - prev_k * num_words))
+            print((best_scores_id - prev_k * num_words))
             self.attn.append(attn_out.index_select(0, prev_k))
             self.global_scorer.update_global_state(self)
 
