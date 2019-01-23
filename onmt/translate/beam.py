@@ -188,21 +188,19 @@ class Beam(object):
                 else:
                     toks = " ".join(current_beam_str[prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
-                if toks in prev_hyps or toks == '<unk>':
-                    scores_temp.append(-1e20)
-                else:
+                if toks not in prev_hyps and toks != '<unk>':
                     scores_temp.append(scores[i].item())
                     non_dups += 1
                     prev_k_temp.append(prev_k[i].item())
                     next_k_temp.append(next_k[i].item())
 
                     if non_dups >= self.size:
-                        scores_temp += [s.item() for s in scores[i+1:]]
+                        #scores_temp += [s.item() for s in scores[i+1:]]
                         break
 
-            scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
+            best_scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
 
-            best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
+            #best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
 
             prev_k = torch.from_numpy(numpy.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(numpy.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
