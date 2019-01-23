@@ -190,12 +190,10 @@ class Beam(object):
                 else:
                     toks = " ".join(current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
-                print(toks)
                 if toks in prev_hyps or toks == '<unk>':
                     scores_temp.append(-1e20)
                 else:
                     print(toks)
-                    print(prev_hyps[:10])
                     scores_temp.append(scores[i].item())
                     non_dups += 1
 
