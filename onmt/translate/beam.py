@@ -65,6 +65,8 @@ class Beam(object):
         self.block_ngram_repeat = block_ngram_repeat
         self.exclusion_tokens = exclusion_tokens
 
+        self.current_beam_str = []
+
     def get_current_state(self):
         "Get the outputs for the current timestep."
         return self.next_ys[-1]
