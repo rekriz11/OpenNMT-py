@@ -165,9 +165,6 @@ class Beam(object):
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
-                print(current_beam_str)
-                print(prev_k[i])
-
                 if current_step == 0:
                     toks = ["\t", self.vocab.itos[next_k[i].item()]]
                 else:
@@ -189,7 +186,7 @@ class Beam(object):
                 if current_step == 0:
                     toks = " ".join([self.vocab.itos[next_k[i].item()]])
                 else:
-                    toks = " ".join(current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
+                    toks = " ".join(current_beam_str[prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
                 if toks in prev_hyps or toks == '<unk>':
                     scores_temp.append(-1e20)
