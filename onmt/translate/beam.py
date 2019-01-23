@@ -142,10 +142,8 @@ class Beam(object):
             # best_scores_id is flattened beam x word array, so calculate which
             # word and beam each score came from
             prev_k = best_scores_id / num_words
-            print(prev_k)
             self.prev_ks.append(prev_k)
             self.next_ys.append((best_scores_id - prev_k * num_words))
-            print((best_scores_id - prev_k * num_words))
             self.attn.append(attn_out.index_select(0, prev_k))
             self.global_scorer.update_global_state(self)
 
@@ -165,12 +163,11 @@ class Beam(object):
             next_k = scores_id - prev_k * num_words
 
             #### FOR DEBUGGING (DELETE LATER)
-            print(scores_id[:self.size])
-            print("\nPREVIOUS PARTIAL HYPOTHESES:")
-            print(prev_hyps)
-
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
+                print(current_beam_str[0])
+                print(prev_k[i])
+                
                 if current_step == 0:
                     toks = ["\t", self.vocab.itos[next_k[i].item()]]
                 else:
