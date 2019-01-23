@@ -112,6 +112,7 @@ class Translator(object):
         self.use_filter_pred = False
 
         self.hamming_dist=opt.hamming_dist
+        self.beam_iters=opt.beam_iters
 
         # for debugging
         self.beam_trace = self.dump_beam != ""
@@ -201,7 +202,7 @@ class Translator(object):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
 
-            if opts.beam_iters == 1:
+            if self.beam_iters == 1:
                 batch_data = self.translate_batch(
                     batch, data, attn_debug, fast=self.fast
                 )
