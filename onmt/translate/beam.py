@@ -168,7 +168,7 @@ class Beam(object):
                     toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()   
                 try:
-                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(best_scores[i].item()))
                 except UnicodeEncodeError:
                     continue
             ####
