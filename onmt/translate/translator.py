@@ -278,7 +278,7 @@ class Translator(object):
             else:
                 for i in range(self.beam_iters):
                     batch_data = self.translate_batch(
-                        batch, data, attn_debug, fast=self.fast, prev_hyps=self.prev_hyps
+                        batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
                     )
                     translations = builder.from_batch(batch_data)
 
