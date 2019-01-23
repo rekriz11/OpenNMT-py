@@ -665,7 +665,7 @@ class Translator(object):
                                     stepwise_penalty=self.stepwise_penalty,
                                     block_ngram_repeat=self.block_ngram_repeat,
                                     exclusion_tokens=exclusion_tokens,
-                                    prev_hyps=prev_hyps
+                                    prev_hyps=prev_hyps,
                                     hamming_dist=self.hamming_dist)
                 for __ in range(batch_size)]
 
