@@ -169,8 +169,11 @@ class Beam(object):
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
                 print(current_beam_str)
-                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
-                ind = next_k[i].item()
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()   
                 try:
                     print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
                 except UnicodeEncodeError:
@@ -199,7 +202,10 @@ class Beam(object):
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
             for i in range(len(prev_k)):
-                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()
                 try:
                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
