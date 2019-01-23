@@ -212,7 +212,7 @@ class Beam(object):
 
             best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
 
-            prev_k = torch.from_numpy(numpy.array(prev_k.temp, dtype='int32')).type(torch.LongTensor).cuda()
+            prev_k = torch.from_numpy(numpy.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(numpy.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
 
             #### FOR DEBUGGING (DELETE LATER)
