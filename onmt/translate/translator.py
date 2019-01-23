@@ -124,6 +124,30 @@ class Translator(object):
                 "scores": [],
                 "log_probs": []}
 
+    ## Gets current beam
+    def debug_translation(self, batch_data, builder, fins):
+        translations = builder.from_batch(batch_data)
+        all_scores = []
+        all_predictions = []
+        pred_score_total, pred_words_total = 0, 0
+
+        for trans in translations:
+            all_scores += [trans.pred_scores[:self.n_best]]
+            pred_score_total += trans.pred_scores[0]
+            pred_words_total += len(trans.pred_sents[0])
+
+            n_best_preds = [" ".join(pred)
+                            for pred in trans.pred_sents[:self.n_best]]
+            all_predictions += [n_best_preds]
+            
+            '''
+            print("CURRENT BEAM: ")
+            for i in range(len(n_best_preds)):
+                print(n_best_preds[i])
+            '''
+
+        return all_predictions
+
     def translate(
         self,
         src,
