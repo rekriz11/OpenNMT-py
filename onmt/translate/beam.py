@@ -196,10 +196,8 @@ class Beam(object):
                     scores_temp.append(scores[i])
                     non_dups += 1
 
-                    if non_dups >= self.size:
-                        break
-
             scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
+            print(scores[:100])
 
             best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
 
