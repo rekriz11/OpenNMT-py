@@ -229,6 +229,22 @@ class Beam(object):
                     continue
             #######
 
+            self.prev_ks.append(prev_k)
+            self.next_ys.append(next_k)
+            self.attn.append(attn_out.index_select(0, prev_k))
+            self.global_scorer.update_global_state(self)
+
+            for i in range(self.next_ys[-1].size(0)):
+                if self.next_ys[-1][i] == self._eos:
+                    global_scores = self.global_scorer.score(self, self.scores)
+                    s = global_scores[i]
+                    self.finished.append((s, len(self.next_ys) - 1, i))
+
+            # End condition is when top-of-beam is EOS and no global score.
+            if self.next_ys[-1][0] == self._eos:
+                self.all_scores.append(self.scores)
+                self.eos_top = True
+
     def done(self):
         return self.eos_top and len(self.finished) >= self.n_best
 
