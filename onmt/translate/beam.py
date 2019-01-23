@@ -196,11 +196,11 @@ class Beam(object):
                 else:
                     print(toks)
                     print(prev_hyps[:10])
-                    scores_temp.append(scores[i])
+                    scores_temp.append(scores[i].item())
                     non_dups += 1
 
                     if non_dups >= 10:
-                        scores_temp += scores[i+1:]
+                        scores_temp += [s.item() for s in scores[i+1:]]
                         break
 
             scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
