@@ -182,6 +182,7 @@ class Beam(object):
 
             ## Removes all candidates already found in a previous beam search
             scores_temp = []
+            prev_k_temp = []
 
             non_dups = 0
             for i in range(len(scores)):
@@ -196,8 +197,10 @@ class Beam(object):
                     print(toks)
                     scores_temp.append(scores[i].item())
                     non_dups += 1
+                    prev_k_temp.append(prev_k)
+                    next_k_temp.append(next_k)
 
-                    if non_dups >= 10:
+                    if non_dups >= self.size:
                         scores_temp += [s.item() for s in scores[i+1:]]
                         break
 
@@ -206,11 +209,11 @@ class Beam(object):
 
             best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
 
-            prev_k = numpy.array([prev_k[i].item() for i in scores_id], dtype='int32')
-            prev_k = torch.from_numpy(prev_k).type(torch.LongTensor).cuda()
+            #prev_k = numpy.array([prev_k[i].item() for i in scores_id], dtype='int32')
+            prev_k = torch.from_numpy(numpy.array(prev_k_temp)).type(torch.LongTensor).cuda()
 
-            next_k = numpy.array([next_k[i].item() for i in scores_id], dtype='int32')
-            next_k = torch.from_numpy(next_k).type(torch.LongTensor).cuda()
+            #next_k = numpy.array([next_k[i].item() for i in scores_id], dtype='int32')
+            next_k = torch.from_numpy(numpy.array(next_k_temp)).type(torch.LongTensor).cuda()
 
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
