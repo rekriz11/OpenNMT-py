@@ -132,12 +132,12 @@ class Translator(object):
         pred_score_total, pred_words_total = 0, 0
 
         for trans in translations:
-            all_scores += [trans.pred_scores[:self.n_best]]
+            all_scores += [trans.pred_scores[:self.size]]
             pred_score_total += trans.pred_scores[0]
             pred_words_total += len(trans.pred_sents[0])
 
             n_best_preds = [" ".join(pred)
-                            for pred in trans.pred_sents[:self.n_best]]
+                            for pred in trans.pred_sents[:self.size]]
             all_predictions += [n_best_preds]
             
             '''
