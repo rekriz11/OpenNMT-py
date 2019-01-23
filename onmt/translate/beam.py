@@ -231,6 +231,9 @@ class Beam(object):
                     continue
             #######
 
+            print(prev_k)
+            print(next_k)
+
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
             self.attn.append(attn_out.index_select(0, prev_k))
