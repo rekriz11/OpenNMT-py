@@ -610,10 +610,10 @@ def translate_opts(parser):
                        model faster and smaller""")
 
     ## Decoding Options
-    group.add('--beam_iters', 'beam_iters',
+    group.add('--beam_iters', '-beam_iters',
               type=int, default=1,
               help="Number of iterations to run beam search")
-    group.add('--hamming_dist', 'hamming_dist',
+    group.add('--hamming_dist', '-hamming_dist',
               type=int, default=1,
               help="Minimum distance necessary to not set probability to -infinity")
     
