@@ -131,14 +131,10 @@ class Translator(object):
         all_predictions = []
         pred_score_total, pred_words_total = 0, 0
 
-        print(len(translations))
-
         for trans in translations:
             all_scores += [trans.pred_scores[:self.beam_size]]
             pred_score_total += trans.pred_scores[0]
             pred_words_total += len(trans.pred_sents[0])
-
-            print(all_scores)
 
             n_best_preds = [" ".join(pred)
                             for pred in trans.pred_sents[:self.beam_size]]
@@ -297,7 +293,10 @@ class Translator(object):
                         n_best_preds = [" ".join(pred)
                                         for pred in trans.pred_sents[:self.n_best]]
                         all_predictions += [n_best_preds]
-                        self.out_file.write('\n'.join(n_best_preds) + '\n')
+                        if i == self.beam_iters - 1:
+                            self.out_file.write(n_best_preds[0]) + '\n')
+                        else:
+                            self.out_file.write(n_best_preds[0]) + '\t')
                         self.out_file.flush()
 
                         if self.verbose:
