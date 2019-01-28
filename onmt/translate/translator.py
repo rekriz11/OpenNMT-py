@@ -776,12 +776,6 @@ class Translator(object):
 
     ## Loads in embeddings
     def load_embeddings(self, embeddings_file, vocab):
-        for k in vocab.stoi:
-            try:
-                print(k)
-            except UnicodeEncodeError:
-                continue
-
         print("Loading embeddings...")
         model = {}
         for line in open(embeddings_file, 'rb'):
@@ -796,7 +790,7 @@ class Translator(object):
             model[word] = embedding
         print("Done.",len(model)," words loaded!")
 
-        for word in vocab:
+        for word in vocab.stoi:
             try:
                 a = model[word]
             except KeyError:
