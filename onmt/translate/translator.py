@@ -776,9 +776,11 @@ class Translator(object):
 
     ## Loads in embeddings
     def load_embeddings(self, embeddings_file, vocab):
-        print(vocab.stoi)
         for k,v in vocab.stoi:
-            print(str(k) + ", " + str(v))
+            try:
+                print(str(k) + ", " + str(v))
+            except KeyError:
+                print(v)
 
         print("Loading embeddings...")
         model = {}
