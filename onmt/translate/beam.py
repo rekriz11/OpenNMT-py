@@ -221,7 +221,7 @@ class Beam(object):
             next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
 
             #### FOR DEBUGGING (DELETE LATER)
-            print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
+            print("\nBEAM AFTER CLUSTERED BEAM SEARCH: ")
             for i in range(len(prev_k)):
                 if current_step == 0:
                     toks = ["\t", self.vocab.itos[next_k[i].item()]]

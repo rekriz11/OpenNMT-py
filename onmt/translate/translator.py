@@ -776,10 +776,8 @@ class Translator(object):
 
     ## Loads in embeddings
     def load_embeddings(self, embeddings_file, vocab):
-        print(vocab)
-
-        for word in vocab:
-            print(word)
+        print("Vector for DOG:")
+        print(vocab[vocab.stoi["dog"]])
         print("Loading embeddings...")
         model = {}
         for line in open(embeddings_file, 'rb'):
