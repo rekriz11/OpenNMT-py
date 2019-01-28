@@ -127,7 +127,7 @@ class Translator(object):
         self.use_filter_pred = False
 
         self.num_clusters = opt.num_clusters
-        self.embeddings_file = opt.embeddings_file
+        self.cluster_embeddings_file = opt.cluster_embeddings_file
 
         # for debugging
         self.beam_trace = self.dump_beam != ""
