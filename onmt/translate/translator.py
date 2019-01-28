@@ -774,7 +774,7 @@ class Translator(object):
         return results
 
     ## Loads in embeddings
-    def load_embeddings(embeddings_file, vocab):
+    def load_embeddings(self, embeddings_file, vocab):
         print(vocab)
         print("Loading embeddings...")
         model = {}
@@ -811,7 +811,7 @@ class Translator(object):
 
         embeddings = []
         if num_clusters > 1:
-            embeddings = load_embeddings(self.cluster_embeddings_file, vocab)
+            embeddings = self.load_embeddings(self.cluster_embeddings_file, vocab)
 
 
         # Define a set of tokens to exclude from ngram-blocking
