@@ -633,6 +633,13 @@ def translate_opts(parser):
               help="""Using grayscale image can training
                        model faster and smaller""")
 
+    group.add('--num_clusters', '-num_clusters',
+              type=int, default=1,
+              help='Number of clusters if using clustered beam search')
+    group.add('--cluster_embeddings', '-cluster_embeddings', 
+              type=str, default='',
+              help='Embeddings file if using clustered beam search.')
+
 
 def add_md_help_argument(parser):
     """ md help parser """
