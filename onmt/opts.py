@@ -636,7 +636,7 @@ def translate_opts(parser):
     group.add('--num_clusters', '-num_clusters',
               type=int, default=1,
               help='Number of clusters if using clustered beam search')
-    group.add('--cluster_embeddings', '-cluster_embeddings', 
+    group.add('--cluster_embeddings_file', '-cluster_embeddings_file', 
               type=str, default='',
               help='Embeddings file if using clustered beam search.')
 
