@@ -776,7 +776,7 @@ class Translator(object):
     ## Loads in embeddings
     def load_embeddings(embeddings_file, vocab):
         print(vocab)
-        print "Loading embeddings..."
+        print("Loading embeddings...")
         model = {}
         for line in open(gloveFile, 'r', encoding='utf8'):
             splitLine = line.split()
@@ -788,7 +788,7 @@ class Translator(object):
                 continue
             embedding = np.array([float(val) for val in splitLine[1:]])
             model[word] = embedding
-        print "Done.",len(model)," words loaded!"
+        print("Done.",len(model)," words loaded!")
 
         for word in vocab:
             try:
