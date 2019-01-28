@@ -778,7 +778,7 @@ class Translator(object):
         print(vocab)
         print("Loading embeddings...")
         model = {}
-        for line in open(embeddings_file, 'r', encoding='utf8'):
+        for line in open(embeddings_file, 'r'):
             splitLine = line.split()
             word = splitLine[0]
             ## Only keeps embeddings of words in vocab
