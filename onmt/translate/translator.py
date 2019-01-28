@@ -17,6 +17,7 @@ import onmt.inputters as inputters
 import onmt.opts as opts
 import onmt.decoders.ensemble
 from onmt.utils.misc import set_random_seed
+import numpy as np
 
 import random
 

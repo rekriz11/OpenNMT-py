@@ -216,9 +216,9 @@ class Beam(object):
                 else:
                     continue
 
-            scores = torch.from_numpy(numpy.array(cscores, dtype='int32')).type(torch.LongTensor).cuda()
-            prev_k = torch.from_numpy(numpy.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
-            next_k = torch.from_numpy(numpy.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
+            scores = torch.from_numpy(np.array(cscores, dtype='int32')).type(torch.LongTensor).cuda()
+            prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
 
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
