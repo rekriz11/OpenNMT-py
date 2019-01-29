@@ -217,7 +217,7 @@ class Beam(object):
             print("\nBEAM CLUSTERS: ")
             for c in range(max(cluster_labels)):
                 print("Cluster: " + str(c))
-                for i in range(len(cprev_k)):
+                for i in range(len(prev_k)):
                     if cluster_labels[i] == c:
                         if current_step == 0:
                             toks = ["\t", self.vocab.itos[next_k[i].item()]]
