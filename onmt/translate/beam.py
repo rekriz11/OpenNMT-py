@@ -216,11 +216,11 @@ class Beam(object):
             cluster_counts = [0 for i in range(self.num_clusters)]
 
             for i, l in enumerate(cluster_labels):
-                if cluster_counts[l] < math.ceil(self.size*2 / self.num_clusters):
+                if cluster_counts[l] < math.ceil(self.size / self.num_clusters):
                     cscores.append(scores[i])
                     cprev_k.append(prev_k[i])
                     cnext_k.append(next_k[i])
-                elif min(cluster_counts) == math.ceil(self.size*2 / self.num_clusters):
+                elif min(cluster_counts) == math.ceil(self.size / self.num_clusters):
                     break
                 else:
                     continue
