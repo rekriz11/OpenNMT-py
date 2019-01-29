@@ -130,6 +130,11 @@ class Translator(object):
         self.num_clusters = opt.num_clusters
         self.cluster_embeddings_file = opt.cluster_embeddings_file
 
+        vocab = self.fields['tgt'][0][1].vocab
+        self.cluster_embeddings = []
+        if self.num_clusters > 1:
+            self.cluster_embeddings = self.load_embeddings(self.cluster_embeddings_file, vocab)
+
         # for debugging
         self.beam_trace = self.dump_beam != ""
         self.beam_accum = None
@@ -817,12 +822,6 @@ class Translator(object):
         data_type = data.data_type
         tgt_field = self.fields['tgt'][0][1]
         vocab = tgt_field.vocab
-        num_clusters = self.num_clusters
-
-        embeddings = []
-        if num_clusters > 1:
-            embeddings = self.load_embeddings(self.cluster_embeddings_file, vocab)
-
 
         # Define a set of tokens to exclude from ngram-blocking
         exclusion_tokens = {vocab.stoi[t] for t in self.ignore_when_blocking}
@@ -838,8 +837,8 @@ class Translator(object):
                                     stepwise_penalty=self.stepwise_penalty,
                                     block_ngram_repeat=self.block_ngram_repeat,
                                     exclusion_tokens=exclusion_tokens,
-                                    num_clusters=num_clusters,
-                                    embeddings=embeddings)
+                                    num_clusters=self.num_clusters,
+                                    embeddings=self.cluster_embeddings)
                 for __ in range(batch_size)]
 
         # (1) Run the encoder on the src.

@@ -213,10 +213,26 @@ class Beam(object):
                         label = i
                 cluster_labels.append(label)
 
+            #### FOR DEBUGGING (DELETE LATER)
+            print("\nBEAM CLUSTERS: ")
+            for c in range(max(cluster_labels)):
+                print("Cluster: " + str(c))
+                for i in range(len(cprev_k)):
+                    if cluster_labels[i] == c:
+                        if current_step == 0:
+                            toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                        else:
+                            toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                        ind = next_k[i].item()
+                        try:
+                           print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                        except UnicodeEncodeError:
+                            continue
+            #######
+
             ## Get top BEAM_SIZE/K candidates from each cluster
             cscores, cprev_k, cnext_k = [], [], []
             cluster_counts = [0 for i in range(self.num_clusters)]
-
             indices = []
 
             for i, l in enumerate(cluster_labels):
