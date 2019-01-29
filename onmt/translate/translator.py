@@ -243,7 +243,7 @@ class Translator(object):
                 all_predictions += [n_best_preds]
 
                 json_dump.append({
-                    'gt': trans.src_raw,
+                    'input': trans.src_raw,
                     'pred': trans.pred_sents[:self.n_best],
                     'scores': [float(x) for x in trans.pred_scores[:self.n_best]]
                 })
