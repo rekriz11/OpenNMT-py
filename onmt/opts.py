@@ -560,6 +560,9 @@ def translate_opts(parser):
               help='Maximum prediction length.')
     group.add('--max_sent_length', '-max_sent_length', action=DeprecateAction,
               help="Deprecated, use `-max_length` instead")
+    group.add('--stochastic_beam', '-stochastic_beam', type=bool, default=False,
+              help="""If True, do random sampling from hypotheses at each step
+                      instead of taking the top b.""")
 
     # Alpha and Beta values for Google Length + Coverage penalty
     # Described here: https://arxiv.org/pdf/1609.08144.pdf, Section 7

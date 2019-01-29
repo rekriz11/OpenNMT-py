@@ -7,6 +7,7 @@ import os
 import math
 
 import torch
+F = torch.nn.functional
 
 from itertools import count
 from onmt.utils.misc import tile
@@ -97,6 +98,7 @@ class Translator(object):
           print('Setting n_best to num_random_samples')
           self.n_best = self.num_random_samples
         self.hidden_state_noise = opt.hidden_state_noise
+        self.do_stochastic_beam = opt.stochastic_beam
 
         self.min_length = opt.min_length
         self.stepwise_penalty = opt.stepwise_penalty
@@ -321,6 +323,7 @@ class Translator(object):
                 keep = torch.ge(logits, kth_best).float()
                 logits = (keep * logits) + ((1-keep) * -10000)
 
+            # probs = F.softmax(logits, dim=1)
             dist = torch.distributions.Multinomial(
                 logits=logits, total_count=1)
             topk_ids = torch.argmax(dist.sample(), dim=1, keepdim=True)
@@ -667,8 +670,18 @@ class Translator(object):
             # Flatten probs into a list of possibilities.
             curr_scores = log_probs / length_penalty
             curr_scores = curr_scores.reshape(-1, beam_size * vocab_size)
-            topk_scores, topk_ids = curr_scores.topk(beam_size, dim=-1)
+            do_stochastic_beam = False
+            if do_stochastic_beam:
+                temp = 1.0  # TODO(daphne): Make this into an opt,.
+                # Sample without replacement from the top 1000 hypotheses.
+                probs = F.softmax(curr_scores[:, :100] / temp, dim=1)
+                # probs = curr_scores[:, :1000]
+                topk_ids = torch.multinomial(probs, beam_size, False)
+                topk_scores = curr_scores.gather(dim=1, index=topk_ids)
+            else:
+                topk_scores, topk_ids = curr_scores.topk(beam_size, dim=-1)
 
+            # import pdb; pdb.set_trace()
             # Recover log probs.
             topk_log_probs = topk_scores * length_penalty
 
@@ -686,6 +699,7 @@ class Translator(object):
             alive_seq = torch.cat(
                 [alive_seq.index_select(0, select_indices),
                  topk_ids.view(-1, 1)], -1)
+
             if return_attention:
                 current_attn = attn.index_select(1, select_indices)
                 if alive_attn is None:
