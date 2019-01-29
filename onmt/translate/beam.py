@@ -225,7 +225,7 @@ class Beam(object):
                 else:
                     continue
 
-            scores = torch.from_numpy(np.array(cscores, dtype='double')).type(torch.LongTensor).cuda()
+            scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
             prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
 

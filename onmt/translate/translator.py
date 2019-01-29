@@ -780,9 +780,12 @@ class Translator(object):
 
         print("Loading embeddings...")
         embeds = {}
-        for line in open(embeddings_file, 'rb'):
+        for i, line in enumerate(open(embeddings_file, 'rb')):
             splitLine = line.split()
             word = splitLine[0]
+
+            if i < 10:
+                print(word)
             embedding = np.array([float(val) for val in splitLine[1:]])
             embeds[word] = embedding
         print("Done.",len(embeds)," words loaded!")
@@ -791,7 +794,9 @@ class Translator(object):
         ## have glove embeddings
         vocab_embeds = {}
         bads = 0
-        for word in vocab.stoi:
+        for i, word in enumerate(vocab.stoi):
+            if i < 10: 
+                print(word)
             try:
                 vocab_embeds[word] = embeds[word.lower()]
             except KeyError:
