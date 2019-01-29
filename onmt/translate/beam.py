@@ -2,8 +2,16 @@ from __future__ import division
 import torch
 from onmt.translate import penalties
 from scipy.cluster.vq import kmeans, vq, whiten
+from sklearn.metrics.pairwise import euclidean_distances
 import numpy as np
 import math
+
+## Calculates distance between 2 vectors
+def calc_distance(x, y):
+    nx = np.asarray(x).reshape(1, -1)
+    ny = np.asarray(y).reshape(1, -1)
+    dist = euclidean_distances(nx, ny)
+    return dist[0][0]
 
 
 class Beam(object):
