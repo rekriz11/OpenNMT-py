@@ -790,12 +790,15 @@ class Translator(object):
         ## Filters by words in vocab, and initializes words that don't
         ## have glove embeddings
         vocab_embeds = {}
+        bads = 0
         for word in vocab.stoi:
             try:
-                vocab_embeds = embeds[word]
+                vocab_embeds[word] = embeds[word.lower()]
             except KeyError:
+                bads += 1
                 vocab_embeds[word] = np.array([0.0 for i in range(300)])
         print("Done. Filtered to ",len(vocab_embeds)," words!")
+        print("BADS: " + str(bads))
         return vocab_embeds
 
     def _translate_batch(self, batch, data, builder):
