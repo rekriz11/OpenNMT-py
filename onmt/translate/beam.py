@@ -215,15 +215,32 @@ class Beam(object):
             cscores, cprev_k, cnext_k = [], [], []
             cluster_counts = [0 for i in range(self.num_clusters)]
 
+            indices = []
+
             for i, l in enumerate(cluster_labels):
                 if cluster_counts[l] < math.ceil(self.size / self.num_clusters):
                     cscores.append(scores[i])
                     cprev_k.append(prev_k[i])
                     cnext_k.append(next_k[i])
+                    indices.append(i)
                 elif min(cluster_counts) == math.ceil(self.size / self.num_clusters):
                     break
                 else:
                     continue
+
+            print(len(cscores))
+
+            if len(cscores) < self.size:
+                while len(cscores) != self.size:
+                    for i, l in enumerate(cluster_labels):
+                        if i not in indices:
+                            cscores.append(scores[i])
+                            cprev_k.append(prev_k[i])
+                            cnext_k.append(next_k[i])
+                            indices.append(i)
+                            break
+
+            print(len(cscores))
 
             scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
             prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()

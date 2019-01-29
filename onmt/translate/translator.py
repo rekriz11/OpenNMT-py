@@ -776,16 +776,11 @@ class Translator(object):
 
     ## Loads in embeddings
     def load_embeddings(self, embeddings_file, vocab):
-        print(len(vocab.stoi))
-
         print("Loading embeddings...")
         embeds = {}
         for i, line in enumerate(open(embeddings_file, 'rb')):
             splitLine = line.split()
             word = splitLine[0].decode('ascii', 'ignore')
-
-            if i < 10:
-                print(word)
             embedding = np.array([float(val) for val in splitLine[1:]])
             embeds[word] = embedding
         print("Done.",len(embeds)," words loaded!")
@@ -795,8 +790,6 @@ class Translator(object):
         vocab_embeds = {}
         found, only_lower, not_found = 0, 0, 0
         for i, word in enumerate(vocab.stoi):
-            if i < 10: 
-                print(word)
             try:
                 vocab_embeds[word] = embeds[word]
                 found += 1
@@ -808,9 +801,11 @@ class Translator(object):
                     not_found += 1
                     vocab_embeds[word] = np.array([0.0 for i in range(300)])
         print("Done. Filtered to ",len(vocab_embeds)," words!")
+        '''
         print("Found: " + str(found))
         print("Only lower: " + str(only_lower))
         print("Not found: " + str(not_found))
+        '''
 
         return vocab_embeds
 
