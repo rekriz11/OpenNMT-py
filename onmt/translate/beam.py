@@ -223,6 +223,7 @@ class Beam(object):
                     cprev_k.append(prev_k[i])
                     cnext_k.append(next_k[i])
                     indices.append(i)
+                    cluster_counts[l] += 1
                 elif min(cluster_counts) == math.ceil(self.size / self.num_clusters):
                     break
                 else:
