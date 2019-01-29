@@ -78,7 +78,7 @@ class Beam(object):
 
         self.current_beam_str = []
         self.vocab = vocab
-        
+
         self.num_clusters = num_clusters
         self.embeddings = embeddings
 
@@ -249,8 +249,8 @@ class Beam(object):
             #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
             #next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
             scores, scores_id = scores.sort(0, descending=True)
-            prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id]), dtype='int32').type(torch.LongTensor).cuda()
-            next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id]), dtype='int32').type(torch.LongTensor).cuda()
+            prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER CLUSTERED BEAM SEARCH: ")
