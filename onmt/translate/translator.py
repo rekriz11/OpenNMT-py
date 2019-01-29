@@ -782,7 +782,7 @@ class Translator(object):
         embeds = {}
         for i, line in enumerate(open(embeddings_file, 'rb')):
             splitLine = line.split()
-            word = splitLine[0]
+            word = splitLine[0].decode('ascii', 'ignore')
 
             if i < 10:
                 print(word)
