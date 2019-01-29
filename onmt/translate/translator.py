@@ -776,6 +776,8 @@ class Translator(object):
 
     ## Loads in embeddings
     def load_embeddings(self, embeddings_file, vocab):
+        print(len(vocab.stoi))
+
         print("Loading embeddings...")
         embeds = {}
         for line in open(embeddings_file, 'rb'):
@@ -793,7 +795,7 @@ class Translator(object):
                 vocab_embeds = embeds[word]
             except KeyError:
                 vocab_embeds[word] = np.array([0.0 for i in range(300)])
-        print("Done. Filtered to ",len(embeds)," words!")
+        print("Done. Filtered to ",len(vocab_embeds)," words!")
         return vocab_embeds
 
     def _translate_batch(self, batch, data, builder):
@@ -804,7 +806,6 @@ class Translator(object):
         data_type = data.data_type
         tgt_field = self.fields['tgt'][0][1]
         vocab = tgt_field.vocab
-
         num_clusters = self.num_clusters
 
         embeddings = []

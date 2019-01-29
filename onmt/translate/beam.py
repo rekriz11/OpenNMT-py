@@ -133,7 +133,7 @@ class Beam(object):
             beam_scores = word_probs[0]
         flat_beam_scores = beam_scores.view(-1)
 
-        if num_clusters == 1:
+        if self.num_clusters == 1:
             best_scores, best_scores_id = flat_beam_scores.topk(self.size, 0,
                                                                 True, True)
 
