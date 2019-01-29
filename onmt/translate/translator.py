@@ -777,26 +777,24 @@ class Translator(object):
     ## Loads in embeddings
     def load_embeddings(self, embeddings_file, vocab):
         print("Loading embeddings...")
-        model = {}
+        embeds = {}
         for line in open(embeddings_file, 'rb'):
             splitLine = line.split()
             word = splitLine[0]
-            ## Only keeps embeddings of words in vocab
-            try:
-                a = vocab.stoi[word]
-            except:
-                continue
             embedding = np.array([float(val) for val in splitLine[1:]])
-            model[word] = embedding
-        print("Done.",len(model)," words loaded!")
+            embeds[word] = embedding
+        print("Done.",len(embeds)," words loaded!")
 
+        ## Filters by words in vocab, and initializes words that don't
+        ## have glove embeddings
+        vocab_embeds = {}
         for word in vocab.stoi:
             try:
-                a = model[word]
+                vocab_embeds = embeds[word]
             except KeyError:
-                model[word] = np.array([0.0 for i in range(300)])
-
-        return model
+                vocab_embeds[word] = np.array([0.0 for i in range(300)])
+        print("Done. Filtered to ",len(embeds)," words!")
+        return vocab_embeds
 
     def _translate_batch(self, batch, data, builder):
         # (0) Prep each of the components of the search.
@@ -823,12 +821,12 @@ class Translator(object):
         beam = [onmt.translate.Beam(beam_size, n_best=self.n_best,
                                     cuda=self.cuda,
                                     global_scorer=self.global_scorer,
-                                    pad=pad, eos=eos, bos=bos,
+                                    pad=pad, eos=eos, bos=bos, vocab=vocab, 
                                     min_length=self.min_length,
                                     stepwise_penalty=self.stepwise_penalty,
                                     block_ngram_repeat=self.block_ngram_repeat,
                                     exclusion_tokens=exclusion_tokens,
-                                    vocab=vocab, num_clusters=num_clusters,
+                                    num_clusters=num_clusters,
                                     embeddings=embeddings)
                 for __ in range(batch_size)]
 

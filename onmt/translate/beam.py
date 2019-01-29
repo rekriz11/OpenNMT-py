@@ -20,7 +20,7 @@ class Beam(object):
        global_scorer (:obj:`GlobalScorer`)
     """
 
-    def __init__(self, size, pad, bos, eos,
+    def __init__(self, size, pad, bos, eos, vocab,
                  n_best=1, cuda=False,
                  global_scorer=None,
                  min_length=0,
@@ -68,6 +68,7 @@ class Beam(object):
         self.block_ngram_repeat = block_ngram_repeat
         self.exclusion_tokens = exclusion_tokens
 
+        self.vocab = vocab
         self.num_clusters = num_clusters
         self.embeddings = embeddings
 
