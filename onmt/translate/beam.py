@@ -1,6 +1,17 @@
 from __future__ import division
 import torch
 from onmt.translate import penalties
+from scipy.cluster.vq import kmeans, vq, whiten
+from sklearn.metrics.pairwise import euclidean_distances
+import numpy as np
+import math
+
+## Calculates distance between 2 vectors
+def calc_distance(x, y):
+    nx = np.asarray(x).reshape(1, -1)
+    ny = np.asarray(y).reshape(1, -1)
+    dist = euclidean_distances(nx, ny)
+    return dist[0][0]
 
 
 class Beam(object):
@@ -17,13 +28,15 @@ class Beam(object):
        global_scorer (:obj:`GlobalScorer`)
     """
 
-    def __init__(self, size, pad, bos, eos,
+    def __init__(self, size, pad, bos, eos, vocab,
                  n_best=1, cuda=False,
                  global_scorer=None,
                  min_length=0,
                  stepwise_penalty=False,
                  block_ngram_repeat=0,
-                 exclusion_tokens=set()):
+                 exclusion_tokens=set(),
+                 num_clusters=1,
+                 embeddings=[]):
 
         self.size = size
         self.tt = torch.cuda if cuda else torch
@@ -63,6 +76,12 @@ class Beam(object):
         self.block_ngram_repeat = block_ngram_repeat
         self.exclusion_tokens = exclusion_tokens
 
+        self.current_beam_str = []
+        self.vocab = vocab
+
+        self.num_clusters = num_clusters
+        self.embeddings = embeddings
+
     def get_current_state(self):
         "Get the outputs for the current timestep."
         return self.next_ys[-1]
@@ -71,7 +90,7 @@ class Beam(object):
         "Get the backpointers for the current timestep."
         return self.prev_ks[-1]
 
-    def advance(self, word_probs, attn_out):
+    def advance(self, word_probs, attn_out, current_beam_str, current_step):
         """
         Given prob over words for every last beam `wordLk` and attention
         `attn_out`: Compute and update the beam search.
@@ -123,30 +142,165 @@ class Beam(object):
         else:
             beam_scores = word_probs[0]
         flat_beam_scores = beam_scores.view(-1)
-        best_scores, best_scores_id = flat_beam_scores.topk(self.size, 0,
-                                                            True, True)
 
-        self.all_scores.append(self.scores)
-        self.scores = best_scores
+        if self.num_clusters == 1:
+            best_scores, best_scores_id = flat_beam_scores.topk(self.size, 0,
+                                                                True, True)
 
-        # best_scores_id is flattened beam x word array, so calculate which
-        # word and beam each score came from
-        prev_k = best_scores_id / num_words
-        self.prev_ks.append(prev_k)
-        self.next_ys.append((best_scores_id - prev_k * num_words))
-        self.attn.append(attn_out.index_select(0, prev_k))
-        self.global_scorer.update_global_state(self)
-
-        for i in range(self.next_ys[-1].size(0)):
-            if self.next_ys[-1][i] == self._eos:
-                global_scores = self.global_scorer.score(self, self.scores)
-                s = global_scores[i]
-                self.finished.append((s, len(self.next_ys) - 1, i))
-
-        # End condition is when top-of-beam is EOS and no global score.
-        if self.next_ys[-1][0] == self._eos:
             self.all_scores.append(self.scores)
-            self.eos_top = True
+            self.scores = best_scores
+
+            # best_scores_id is flattened beam x word array, so calculate which
+            # word and beam each score came from
+            prev_k = best_scores_id / num_words
+            self.prev_ks.append(prev_k)
+            self.next_ys.append((best_scores_id - prev_k * num_words))
+            self.attn.append(attn_out.index_select(0, prev_k))
+            self.global_scorer.update_global_state(self)
+
+            for i in range(self.next_ys[-1].size(0)):
+                if self.next_ys[-1][i] == self._eos:
+                    global_scores = self.global_scorer.score(self, self.scores)
+                    s = global_scores[i]
+                    self.finished.append((s, len(self.next_ys) - 1, i))
+
+            # End condition is when top-of-beam is EOS and no global score.
+            if self.next_ys[-1][0] == self._eos:
+                self.all_scores.append(self.scores)
+                self.eos_top = True
+        else:
+            scores, scores_id = flat_beam_scores.topk(self.size*2, 0, True, True)
+            prev_k = scores_id / num_words
+            next_k = scores_id - prev_k * num_words
+
+            #### FOR DEBUGGING (DELETE LATER)
+            print("\nORIGINAL BEAM: ")
+            for i in range(self.size):
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()   
+                try:
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                except UnicodeEncodeError:
+                    continue
+            ####
+
+            ## Get vector representations of candidates
+            embeds = []
+            for i in range(len(scores)):
+                if current_step == 0:
+                    toks = [self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
+
+                cand_embeds = [self.embeddings[t] for t in toks]
+                embeds.append(sum(cand_embeds)/len(cand_embeds))
+            std_embeds = whiten(embeds)
+
+            ## Run K-means to cluster candidates into K clusters
+            centroids,_ = kmeans(std_embeds, self.num_clusters)
+            cluster_labels = []
+            for e in std_embeds:
+                min_distance = 1e10
+                label = -1
+                for i, c in enumerate(centroids):
+                    dist = calc_distance(c, e)
+
+                    if dist < min_distance:
+                        min_distance = dist
+                        label = i
+                cluster_labels.append(label)
+
+            #### FOR DEBUGGING (DELETE LATER)
+            print("\nBEAM CLUSTERS: ")
+            for c in range(max(cluster_labels)+1):
+                print("Cluster: " + str(c))
+                for i in range(len(prev_k)):
+                    if cluster_labels[i] == c:
+                        if current_step == 0:
+                            toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                        else:
+                            toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                        ind = next_k[i].item()
+                        try:
+                           print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                        except UnicodeEncodeError:
+                            continue
+            #######
+
+            ## Get top BEAM_SIZE/K candidates from each cluster
+            cscores, cprev_k, cnext_k = [], [], []
+            cluster_counts = [0 for i in range(self.num_clusters)]
+            indices = []
+
+            for i, l in enumerate(cluster_labels):
+                if cluster_counts[l] < math.ceil(self.size / self.num_clusters):
+                    cscores.append(scores[i])
+                    cprev_k.append(prev_k[i])
+                    cnext_k.append(next_k[i])
+                    indices.append(i)
+                    cluster_counts[l] += 1
+                elif min(cluster_counts) == math.ceil(self.size / self.num_clusters):
+                    break
+                else:
+                    continue
+
+            print(len(cscores))
+
+            if len(cscores) < self.size:
+                while len(cscores) != self.size:
+                    for i, l in enumerate(cluster_labels):
+                        if i not in indices:
+                            cscores.append(scores[i])
+                            cprev_k.append(prev_k[i])
+                            cnext_k.append(next_k[i])
+                            indices.append(i)
+                            break
+
+            print(len(cscores))
+
+            scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
+            #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
+            #next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
+            scores, scores_id = scores.sort(0, descending=True)
+            prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+
+            #### FOR DEBUGGING (DELETE LATER)
+            print("\nBEAM AFTER CLUSTERED BEAM SEARCH: ")
+            for i in range(len(prev_k)):
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()
+                try:
+                   print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                except UnicodeEncodeError:
+                    continue
+            #######
+
+            self.prev_ks.append(prev_k)
+            self.next_ys.append(next_k)
+            self.attn.append(attn_out.index_select(0, prev_k))
+            self.global_scorer.update_global_state(self)
+
+            for i in range(self.next_ys[-1].size(0)):
+                if self.next_ys[-1][i] == self._eos:
+                    global_scores = self.global_scorer.score(self, self.scores)
+                    s = global_scores[i]
+                    self.finished.append((s, len(self.next_ys) - 1, i))
+
+            # End condition is when top-of-beam is EOS and no global score.
+            if self.next_ys[-1][0] == self._eos:
+                self.all_scores.append(self.scores)
+                self.eos_top = True
+
+
+
+
 
     def done(self):
         return self.eos_top and len(self.finished) >= self.n_best
@@ -165,6 +319,35 @@ class Beam(object):
         scores = [sc for sc, _, _ in self.finished]
         ks = [(t, k) for _, t, k in self.finished]
         return scores, ks
+
+    ## ADDED CODE: Gets current beam (without changing output)
+    def get_current_beam_str(self, beam_size):
+        prev_beam = list(self.current_beam_str)
+        self.current_beam_str = []
+
+        ## Keeps all candidates from previous beam if they are finished
+        for (s, step, rank, fin) in prev_beam:
+            if fin:
+                self.current_beam_str.append((s, step, rank, fin))
+
+        ## Adds all candidates from current beam, even if they are not finished
+        for i in range(beam_size):
+            global_scores = self.global_scorer.score(self, self.scores)
+            s = global_scores[i]
+
+            if self.next_ys[len(self.next_ys)-1][i] == self._eos:
+                fin = True
+            else:
+                fin = False
+
+            self.current_beam_str.append((s, len(self.next_ys) - 1, i, fin))
+
+        ## Sorts the beam
+        self.current_beam_str.sort(key=lambda a: -a[0])
+        scores = [sc for sc, _, _, _ in self.current_beam_str]
+        ks = [(t, k) for _, t, k, _ in self.current_beam_str]
+        fins = [f for _, _, _, f in self.current_beam_str]
+        return scores, ks, fins
 
     def get_hyp(self, timestep, k):
         """

@@ -17,6 +17,9 @@ import onmt.inputters as inputters
 import onmt.opts as opts
 import onmt.decoders.ensemble
 from onmt.utils.misc import set_random_seed
+import numpy as np
+
+import random
 
 
 def build_translator(opt, report_score=True, logger=None, out_file=None):
@@ -124,6 +127,14 @@ class Translator(object):
 
         self.use_filter_pred = False
 
+        self.num_clusters = opt.num_clusters
+        self.cluster_embeddings_file = opt.cluster_embeddings_file
+
+        vocab = self.fields['tgt'][0][1].vocab
+        self.cluster_embeddings = []
+        if self.num_clusters > 1:
+            self.cluster_embeddings = self.load_embeddings(self.cluster_embeddings_file, vocab)
+
         # for debugging
         self.beam_trace = self.dump_beam != ""
         self.beam_accum = None
@@ -215,7 +226,7 @@ class Translator(object):
         import json
         for batch in data_iter:
             batch_data = self.translate_batch(
-                batch, data, attn_debug, fast=self.fast
+                batch, data, attn_debug, builder, fast=self.fast
             )
             translations = builder.from_batch(batch_data)
 
@@ -442,7 +453,7 @@ class Translator(object):
 
         return results
 
-    def translate_batch(self, batch, data, attn_debug, fast=False):
+    def translate_batch(self, batch, data, attn_debug, builder, fast=False):
         """
         Translate a batch of sentences.
 
@@ -476,7 +487,7 @@ class Translator(object):
                     n_best=self.n_best,
                     return_attention=attn_debug or self.replace_unk)
             else:
-                return self._translate_batch(batch, data)
+                return self._translate_batch(batch, data, builder)
 
     def _run_encoder(self, batch, data_type):
         src = inputters.make_features(batch, 'src', data_type)
@@ -768,7 +779,42 @@ class Translator(object):
 
         return results
 
-    def _translate_batch(self, batch, data):
+    ## Loads in embeddings
+    def load_embeddings(self, embeddings_file, vocab):
+        print("Loading embeddings...")
+        embeds = {}
+        for i, line in enumerate(open(embeddings_file, 'rb')):
+            splitLine = line.split()
+            word = splitLine[0].decode('ascii', 'ignore')
+            embedding = np.array([float(val) for val in splitLine[1:]])
+            embeds[word] = embedding
+        print("Done.",len(embeds)," words loaded!")
+
+        ## Filters by words in vocab, and initializes words that don't
+        ## have glove embeddings
+        vocab_embeds = {}
+        found, only_lower, not_found = 0, 0, 0
+        for i, word in enumerate(vocab.stoi):
+            try:
+                vocab_embeds[word] = embeds[word]
+                found += 1
+            except KeyError:
+                try:
+                    vocab_embeds[word] = embeds[word.lower()]
+                    only_lower += 1
+                except KeyError:
+                    not_found += 1
+                    vocab_embeds[word] = np.array([0.0 for i in range(300)])
+        print("Done. Filtered to ",len(vocab_embeds)," words!")
+        '''
+        print("Found: " + str(found))
+        print("Only lower: " + str(only_lower))
+        print("Not found: " + str(not_found))
+        '''
+
+        return vocab_embeds
+
+    def _translate_batch(self, batch, data, builder):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -786,11 +832,13 @@ class Translator(object):
         beam = [onmt.translate.Beam(beam_size, n_best=self.n_best,
                                     cuda=self.cuda,
                                     global_scorer=self.global_scorer,
-                                    pad=pad, eos=eos, bos=bos,
+                                    pad=pad, eos=eos, bos=bos, vocab=vocab, 
                                     min_length=self.min_length,
                                     stepwise_penalty=self.stepwise_penalty,
                                     block_ngram_repeat=self.block_ngram_repeat,
-                                    exclusion_tokens=exclusion_tokens)
+                                    exclusion_tokens=exclusion_tokens,
+                                    num_clusters=self.num_clusters,
+                                    embeddings=self.cluster_embeddings)
                 for __ in range(batch_size)]
 
         # (1) Run the encoder on the src.
@@ -847,8 +895,19 @@ class Translator(object):
             select_indices_array = []
             # Loop over the batch_size number of beam
             for j, b in enumerate(beam):
+
+                ## Gets previous beam
+                current_beam = []
+                if i > 0:
+                    ret2, fins = self._from_current_beam(beam)
+                    ret2["gold_score"] = [0] * batch_size
+                    if "tgt" in batch.__dict__:
+                        ret2["gold_score"] = self._run_target(batch, data)
+                    ret2["batch"] = batch
+                    current_beam = self.debug_translation(ret2, builder, fins)[0]
+
                 b.advance(out[j, :],
-                          beam_attn.data[j, :, :memory_lengths[j]])
+                          beam_attn.data[j, :, :memory_lengths[j]], current_beam, i)
                 select_indices_array.append(
                     b.get_current_origin() + j * beam_size)
             select_indices = torch.cat(select_indices_array)
@@ -869,6 +928,42 @@ class Translator(object):
             results["attention"].append(attn)
 
         return results
+
+    ## ADDED CODE: gets current beam
+    def _from_current_beam(self, beam):
+        ret = {"predictions": [],
+               "scores": [],
+               "attention": []}
+        for b in beam:
+            n_best = self.n_best
+            scores, ks, fins = b.get_current_beam_str(self.beam_size)
+            hyps, attn = [], []
+            for i, (times, k) in enumerate(ks[:n_best]):
+                hyp, att = b.get_hyp(times, k)
+                hyps.append(hyp)
+                attn.append(att)
+            ret["predictions"].append(hyps)
+            ret["scores"].append(scores)
+            ret["attention"].append(attn)
+        return ret, fins
+
+    ## Gets current beam
+    def debug_translation(self, batch_data, builder, fins):
+        translations = builder.from_batch(batch_data)
+        all_scores = []
+        all_predictions = []
+        pred_score_total, pred_words_total = 0, 0
+
+        for trans in translations:
+            all_scores += [trans.pred_scores[:self.beam_size]]
+            pred_score_total += trans.pred_scores[0]
+            pred_words_total += len(trans.pred_sents[0])
+
+            n_best_preds = [" ".join(pred)
+                            for pred in trans.pred_sents[:self.beam_size]]
+            all_predictions += [n_best_preds]
+
+        return all_predictions
 
     def _score_target(self, batch, memory_bank, src_lengths, data, src_map):
         tgt_in = inputters.make_features(batch, 'tgt')[:-1]
