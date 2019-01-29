@@ -948,6 +948,24 @@ class Translator(object):
             ret["attention"].append(attn)
         return ret, fins
 
+    ## Gets current beam
+    def debug_translation(self, batch_data, builder, fins):
+        translations = builder.from_batch(batch_data)
+        all_scores = []
+        all_predictions = []
+        pred_score_total, pred_words_total = 0, 0
+
+        for trans in translations:
+            all_scores += [trans.pred_scores[:self.beam_size]]
+            pred_score_total += trans.pred_scores[0]
+            pred_words_total += len(trans.pred_sents[0])
+
+            n_best_preds = [" ".join(pred)
+                            for pred in trans.pred_sents[:self.beam_size]]
+            all_predictions += [n_best_preds]
+
+        return all_predictions
+
     def _score_target(self, batch, memory_bank, src_lengths, data, src_map):
         tgt_in = inputters.make_features(batch, 'tgt')[:-1]
 
