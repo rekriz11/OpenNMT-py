@@ -215,7 +215,7 @@ class Beam(object):
 
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM CLUSTERS: ")
-            for c in range(max(cluster_labels)):
+            for c in range(max(cluster_labels)+1):
                 print("Cluster: " + str(c))
                 for i in range(len(prev_k)):
                     if cluster_labels[i] == c:
