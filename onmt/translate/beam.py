@@ -169,16 +169,19 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
-            print(scores_id[:self.size])
-
+            #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
-                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
-                ind = next_k[i].item()
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()   
                 try:
                     print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
                 except UnicodeEncodeError:
                     continue
+            ####
 
             ## Keeps track of number of candidates from the same candidate on previous beam
             prev_beam_counts = dict()
@@ -205,14 +208,17 @@ class Beam(object):
 
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
-            for i in range(len(prev_k)):
-                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
-                ind = next_k[i].item()
+            for i in range(self.size):
+                if current_step == 0:
+                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
+                else:
+                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()   
                 try:
-                   print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
                 except UnicodeEncodeError:
                     continue
-            #######
+            ####
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
