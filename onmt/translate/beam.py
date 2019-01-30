@@ -169,6 +169,7 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
@@ -182,6 +183,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
+            '''
 
             ## Only consider beam_size x k_per_cand candidates
             indices = []
@@ -202,6 +204,7 @@ class Beam(object):
             prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
+            '''
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
             for i in range(self.size):
@@ -215,6 +218,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
+            '''
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
