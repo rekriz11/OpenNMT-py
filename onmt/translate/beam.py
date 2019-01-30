@@ -270,43 +270,35 @@ class Beam(object):
             prev_k_temp = []
             next_k_temp = []
             scores_orig = []
-            score_ids_orig = []
 
             for i in range(len(scores)):
                 if prev_beam_counts[prev_k[i].item()] < self.size:
-                    toks = current_beam_str[0][prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
-
-                    c = 0
-                    for tok in toks:
-                        try:
-                            c += word_counts[tok]
-                        except KeyError:
-                            continue
-                    prev_beam_counts[prev_k[i].item()] += 1
+                    ## Gets word count of generated token
+                    tok = self.vocab.itos[next_k[i].item()]
+                    try:
+                        c = word_counts[tok]
+                        word_counts[tok] += 1
+                    except KeyError:
+                        c = 0
+                        word_counts[tok] = 1
 
                     scores_temp.append(scores[i] - self.hamming_penalty*c)
                     scores_orig.append(scores[i])
-                    score_ids_orig.append(scores_id[i])
+
                     prev_k_temp.append(prev_k[i])
                     next_k_temp.append(next_k[i])
-
-                    ## Keeps track of word counts for the next candidates
-                    for tok in toks:
-                        try:
-                            word_counts[tok] += 1
-                        except KeyError:
-                            word_counts[tok] = 1
+                    prev_beam_counts[prev_k[i].item()] += 1
                 else:
                     key_min = min(prev_beam_counts.keys(), key=(lambda k: prev_beam_counts[k]))
                     if prev_beam_counts[key_min] == self.size:
                         break
 
-            scores_mod = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
-            scores_mod, scores_id = scores_mod.topk(self.size, 0, True, True)
+            best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
+            best_scores, scores_id = scores_mod.topk(self.size, 0, True, True)
 
             prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
-            best_scores = torch.from_numpy(np.array([scores_orig[i] for i in scores_id], dtype='double')).cuda()
+            #best_scores = torch.from_numpy(np.array([scores_orig[i] for i in scores_id], dtype='double')).cuda()
 
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER DIVERSE BEAM SEARCH")
