@@ -233,6 +233,8 @@ class Translator(object):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
 
+            print("HIIIIII")
+
             ## If number of iterations is 1, continue as normal
             if self.beam_iters == 1:
                 batch_data = self.translate_batch(
@@ -241,6 +243,7 @@ class Translator(object):
                 translations = builder.from_batch(batch_data)
 
                 for trans in translations:
+                    print("HI2")
                     all_scores += [trans.pred_scores[:self.n_best]]
                     pred_score_total += trans.pred_scores[0]
                     pred_words_total += len(trans.pred_sents[0])
