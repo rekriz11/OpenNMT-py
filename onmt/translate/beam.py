@@ -263,6 +263,7 @@ class Beam(object):
             '''
 
             indices = ((prev_k == i).nonzero())[:self.size]
+            print(len(indices))
 
             ## Saves counts of words seen in candidates so far
             word_counts = dict()
@@ -304,6 +305,7 @@ class Beam(object):
                         break
                 '''
 
+            print(len(scores_temp))
             best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
             best_scores, scores_id = best_scores.topk(self.size, 0, True, True)
 
