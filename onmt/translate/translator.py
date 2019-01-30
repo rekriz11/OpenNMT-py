@@ -319,19 +319,14 @@ class Translator(object):
                         ## Saves predictions and scores into dictionary 
                         ## to be added to json_dump later
 
-                        print(trans.src_raw)
-                        print(trans.pred_sents[:1])
-                        print([float(x) for x in trans.pred_scores[:1]])
-
                         inputs[j] = trans.src_raw
-                        num_outputs = 1
                         #num_outputs = math.ceil(self.n_best / self.beam_iters)
                         try:
-                            preds[j] += trans.pred_sents[:num_outputs]
-                            scores[j] += [float(x) for x in trans.pred_scores[:num_outputs]]
+                            preds[j] += trans.pred_sents[:1]
+                            scores[j] += [float(x) for x in trans.pred_scores[:1]]
                         except KeyError:
                             preds[j] = trans.pred_sents[:self.n_best]
-                            scores[j] = [float(x) for x in trans.pred_scores[:num_outputs]]
+                            scores[j] = [float(x) for x in trans.pred_scores[:1]]
 
                         if self.verbose:
                             sent_number = next(counter)
@@ -364,12 +359,16 @@ class Translator(object):
 
                 # Adds output to json_dump
                 print(scores)
+                print(preds)
+                print(inputs)
                 for i in range(max(list(inputs.keys()))):
                     json_dump.append({
                         'input': inputs[i],
                         'pred': preds[i],
                         'scores': scores[i]
                     })
+
+                print(json_dump)
 
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
