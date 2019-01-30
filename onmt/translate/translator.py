@@ -298,7 +298,12 @@ class Translator(object):
 
                     for j, trans in enumerate(translations):
                         all_scores += [trans.pred_scores[:self.n_best]]
-                        pred_score_total += trans.pred_scores[0]
+
+                        try:
+                            pred_score_total += trans.pred_scores[0]
+                        except RunTimeError:
+                            pred_score_total += trans.pred_scores[0].double().cuda()
+
                         pred_words_total += len(trans.pred_sents[0])
                         if tgt is not None:
                             gold_score_total += trans.gold_score
