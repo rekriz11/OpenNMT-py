@@ -264,8 +264,8 @@ class Beam(object):
 
             indices = []
             for i in range(self.size):
-                indices += ((prev_k == i).nonzero())[:self.size]
-                print(indices)
+                indices.append(((prev_k == i).nonzero())[:self.size])
+            print(indices)
 
             ## Saves counts of words seen in candidates so far
             word_counts = dict()
