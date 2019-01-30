@@ -199,12 +199,12 @@ class Beam(object):
                     prev_k_temp.append(prev_k[i])
                     next_k_temp.append(next_k[i])
 
-            scores_temp = numpy.array(scores_temp, dtype='double')
+            scores_temp = np.array(scores_temp, dtype='double')
             scores_temp = torch.from_numpy(scores_temp).double().cuda()
 
             best_scores, scores_id = scores_temp.sort(0, descending=True)
-            prev_k = torch.from_numpy(numpy.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
-            next_k = torch.from_numpy(numpy.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
