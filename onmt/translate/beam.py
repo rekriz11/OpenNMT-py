@@ -157,6 +157,7 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
@@ -170,6 +171,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
+            '''
 
             ## Get vector representations of candidates
             embeds = []
@@ -197,6 +199,7 @@ class Beam(object):
                         label = i
                 cluster_labels.append(label)
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM CLUSTERS: ")
             for c in range(max(cluster_labels)+1):
@@ -213,6 +216,7 @@ class Beam(object):
                         except UnicodeEncodeError:
                             continue
             #######
+            '''
 
             ## Get top BEAM_SIZE/K candidates from each cluster
             cscores, cprev_k, cnext_k = [], [], []
@@ -231,8 +235,7 @@ class Beam(object):
                 else:
                     continue
 
-            print(len(cscores))
-
+            ## If there aren't enough in each cluster, add candidates with highest scores
             if len(cscores) < self.size:
                 while len(cscores) != self.size:
                     for i, l in enumerate(cluster_labels):
@@ -242,8 +245,6 @@ class Beam(object):
                             cnext_k.append(next_k[i])
                             indices.append(i)
                             break
-
-            print(len(cscores))
 
             scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
             #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()

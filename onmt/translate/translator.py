@@ -252,10 +252,6 @@ class Translator(object):
                                     for pred in trans.pred_sents[:self.n_best]]
                     all_predictions += [n_best_preds]
 
-                    print(trans.src_raw)
-                    print(trans.pred_sents[:self.n_best])
-                    print([float(x) for x in trans.pred_scores[:self.n_best]])
-
                     json_dump.append({
                         'input': trans.src_raw,
                         'pred': trans.pred_sents[:self.n_best],
@@ -354,19 +350,14 @@ class Translator(object):
                             os.write(1, output.encode('utf-8'))
 
                 # Adds output to json_dump
-                print(scores)
-                print(preds)
-                print(input)
                 json_dump.append({
                     'input': input,
                     'pred': preds,
                     'scores': scores
                 })
 
-        print(json_dump)
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
-        print('Saved json with predictions to: %s' % self.out_file.name)
 
         if self.report_score:
             msg = self._report_score('PRED', pred_score_total,
@@ -893,8 +884,8 @@ class Translator(object):
                 except KeyError:
                     not_found += 1
                     vocab_embeds[word] = np.array([0.0 for i in range(300)])
-        print("Done. Filtered to ",len(vocab_embeds)," words!")
         '''
+        print("Done. Filtered to ",len(vocab_embeds)," words!")
         print("Found: " + str(found))
         print("Only lower: " + str(only_lower))
         print("Not found: " + str(not_found))
