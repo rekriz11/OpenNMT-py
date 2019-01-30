@@ -262,39 +262,47 @@ class Beam(object):
             ####
             '''
 
+            indices = ((prev_k == i).nonzero())[:self.size]
+
             ## Saves counts of words seen in candidates so far
             word_counts = dict()
+            '''
             prev_beam_counts = dict()
             for b in range(self.size):
                 prev_beam_counts[b] = 0
+            '''
 
             scores_temp = []
             prev_k_temp = []
             next_k_temp = []
             scores_orig = []
 
-            for i in range(len(scores)):
+            for i in indices:
                 if prev_beam_counts[prev_k[i].item()] < self.size:
-                    ## Gets word count of generated token
-                    tok = self.vocab.itos[next_k[i].item()]
-                    try:
-                        c = word_counts[tok]
-                        word_counts[tok] += 1
-                    except KeyError:
-                        c = 0
-                        word_counts[tok] = 1
+                ## Gets word count of generated token
+                tok = self.vocab.itos[next_k[i].item()]
+                try:
+                    c = word_counts[tok]
+                    word_counts[tok] += 1
+                except KeyError:
+                    c = 0
+                    word_counts[tok] = 1
 
-                    scores_temp.append(scores[i] - self.hamming_penalty*c)
-                    scores_orig.append(scores[i])
+                scores_temp.append(scores[i] - self.hamming_penalty*c)
+                scores_orig.append(scores[i])
 
-                    prev_k_temp.append(prev_k[i])
-                    next_k_temp.append(next_k[i])
-                    prev_beam_counts[prev_k[i].item()] += 1
+                prev_k_temp.append(prev_k[i])
+                next_k_temp.append(next_k[i])
+                
+
+                '''
+                prev_beam_counts[prev_k[i].item()] += 1
                 else:
                     key_min = min(prev_beam_counts.keys(), key=(lambda k: prev_beam_counts[k]))
                     if prev_beam_counts[key_min] == self.size:
                         print(i)
                         break
+                '''
 
             best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
             best_scores, scores_id = best_scores.topk(self.size, 0, True, True)
