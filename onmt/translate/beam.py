@@ -293,6 +293,7 @@ class Beam(object):
                 else:
                     key_min = min(prev_beam_counts.keys(), key=(lambda k: prev_beam_counts[k]))
                     if prev_beam_counts[key_min] == self.size:
+                        print(i)
                         break
 
             best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
