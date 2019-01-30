@@ -272,7 +272,6 @@ class Beam(object):
             scores_orig = []
 
             for i in indices:
-                #if prev_beam_counts[prev_k[i].item()] < self.size:
                 ## Gets word count of generated token
                 tok = self.vocab.itos[next_k[i].item()]
                 try:
@@ -284,16 +283,14 @@ class Beam(object):
 
                 scores_temp.append(scores[i] - self.hamming_penalty*c)
                 scores_orig.append(scores[i])
-
                 prev_k_temp.append(prev_k[i])
                 next_k_temp.append(next_k[i])
 
-            print(len(scores_temp))
             best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
             best_scores, scores_id = best_scores.topk(self.size, 0, True, True)
 
-            prev_k = torch.from_numpy(np.array([prev_k_temp[indices[i]].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
-            next_k = torch.from_numpy(np.array([next_k_temp[indices[i]].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER DIVERSE BEAM SEARCH")
