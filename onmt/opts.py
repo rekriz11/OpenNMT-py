@@ -649,6 +649,16 @@ def translate_opts(parser):
               type=str, default='',
               help='Embeddings file if using clustered beam search.')
 
+    # Option relating to k_per_cand
+    group.add('--k_per_cand', '-k_per_cand',
+              type=int, default=0,
+              help='Number of candidates allowed per beam hypothesis')
+
+    # Option relating to diverse beam search
+    group.add('--hamming_penalty', '-hamming_penalty',
+              type=float, default=0.0,
+              help='Hamming Penalty for overlapping candidates')
+
 
 def add_md_help_argument(parser):
     """ md help parser """

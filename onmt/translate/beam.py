@@ -38,7 +38,9 @@ class Beam(object):
                  prev_hyps=[],
                  hamming_dist=1,
                  num_clusters=1,
-                 embeddings=[]):
+                 embeddings=[],
+                 k_per_cand=0,
+                 hamming_penalty=0.0):
 
         self.size = size
         self.tt = torch.cuda if cuda else torch
@@ -89,6 +91,12 @@ class Beam(object):
         ## Arguments for iterative beam search
         self.prev_hyps = prev_hyps
         self.hamming_dist = hamming_dist
+
+        # Argument for k_per_cand
+        self.k_per_cand = k_per_cand
+
+        # Argument for diverse beam search
+        self.hamming_penalty = hamming_penalty
 
 
     def get_current_state(self):
@@ -155,7 +163,77 @@ class Beam(object):
             beam_scores = word_probs[0]
         flat_beam_scores = beam_scores.view(-1)
 
-        if self.num_clusters > 1:
+        ## K_PER_CAND CODE
+        if current_step > 0 and self.k_per_cand != 0:
+            scores, scores_id = scores.sort(0, descending=True)
+            prev_k = scores_id / num_words
+            next_k = scores_id - prev_k * num_words
+
+            print(scores_id[:self.size])
+
+            print("\nORIGINAL BEAM: ")
+            for i in range(self.size):
+                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()
+                try:
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                except UnicodeEncodeError:
+                    continue
+
+            ## Keeps track of number of candidates from the same candidate on previous beam
+            prev_beam_counts = dict()
+            for b in range(self.size):
+                prev_beam_counts[b] = 0
+
+            scores_temp = []
+            prev_k_temp = []
+            next_k_temp = []
+            for i in range(self.size):
+                indices = ((prev_k == i).nonzero())[:self.k_per_cand]
+
+                for i in indices:
+                    scores_temp.append(scores[i].item())
+                    prev_k_temp.append(prev_k[i])
+                    next_k_temp.append(next_k[i])
+
+            scores_temp = numpy.array(scores_temp, dtype='double')
+            scores_temp = torch.from_numpy(scores_temp).double().cuda()
+
+            best_scores, scores_id = scores_temp.sort(0, descending=True)
+            prev_k = torch.from_numpy(numpy.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(numpy.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+
+            ####### FOR DEBUGGING (DELETE LATER)
+            print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
+            for i in range(len(prev_k)):
+                toks = current_beam_str[0][prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                ind = next_k[i].item()
+                try:
+                   print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                except UnicodeEncodeError:
+                    continue
+            #######
+
+            self.all_scores.append(self.scores)
+            self.scores = best_scores
+            self.prev_ks.append(prev_k)
+            self.next_ys.append(next_k)
+            self.attn.append(attn_out.index_select(0, prev_k))
+            self.global_scorer.update_global_state(self)
+
+            for i in range(self.next_ys[-1].size(0)):
+                if self.next_ys[-1][i] == self._eos:
+                    global_scores = self.global_scorer.score(self, self.scores)
+                    s = global_scores[i]
+                    self.finished.append((s, len(self.next_ys) - 1, i))
+
+            # End condition is when top-of-beam is EOS and no global score.
+            if self.next_ys[-1][0] == self._eos:
+                self.all_scores.append(self.scores)
+                self.eos_top = True
+
+        ## CLUSTERED BEAM SEARCH CODE
+        elif self.num_clusters > 1:
             scores, scores_id = flat_beam_scores.topk(self.size*2, 0, True, True)
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
@@ -250,8 +328,6 @@ class Beam(object):
                             break
 
             best_scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
-            #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
-            #next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
             best_scores, scores_id = best_scores.sort(0, descending=True)
             prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
@@ -274,7 +350,6 @@ class Beam(object):
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
-
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
             self.attn.append(attn_out.index_select(0, prev_k))
@@ -290,6 +365,8 @@ class Beam(object):
             if self.next_ys[-1][0] == self._eos:
                 self.all_scores.append(self.scores)
                 self.eos_top = True
+
+        ## ITERATIVE BEAM SEARCH CODE
         elif self.prev_hyps != []:
             scores, scores_id = flat_beam_scores.sort(0, descending=True)
             prev_k = scores_id / num_words
@@ -374,6 +451,8 @@ class Beam(object):
             if self.next_ys[-1][0] == self._eos:
                 self.all_scores.append(self.scores)
                 self.eos_top = True
+
+        ## REGULAR BEAM SEARCH CODE
         else:
             best_scores, best_scores_id = flat_beam_scores.topk(self.size, 0,
                                                                 True, True)
