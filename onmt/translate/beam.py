@@ -185,21 +185,19 @@ class Beam(object):
             ####
             '''
 
-            ## Keeps track of number of candidates from the same candidate on previous beam
-            prev_beam_counts = dict()
-            for b in range(self.size):
-                prev_beam_counts[b] = 0
+            ## Only consider beam_size x k_per_cand candidates
+            indices = []
+            for i in range(self.size):
+                inds = ((prev_k == i).nonzero())[:self.k_per_cand]
+                indices += [ind[0].item() for ind in inds]
 
             scores_temp = []
             prev_k_temp = []
             next_k_temp = []
-            for i in range(self.size):
-                indices = ((prev_k == i).nonzero())[:self.k_per_cand]
-
-                for i in indices:
-                    scores_temp.append(scores[i].item())
-                    prev_k_temp.append(prev_k[i])
-                    next_k_temp.append(next_k[i])
+            for i in indices:
+                scores_temp.append(scores[i])
+                prev_k_temp.append(prev_k[i])
+                next_k_temp.append(next_k[i])
 
             scores_temp = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
             best_scores, scores_id = scores_temp.topk(self.size, 0, True, True)
