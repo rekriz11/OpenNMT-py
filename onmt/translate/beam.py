@@ -152,7 +152,7 @@ class Beam(object):
             beam_scores = word_probs[0]
         flat_beam_scores = beam_scores.view(-1)
 
-        if self.num_cluster > 1:
+        if self.num_clusters > 1:
             scores, scores_id = flat_beam_scores.topk(self.size*2, 0, True, True)
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
