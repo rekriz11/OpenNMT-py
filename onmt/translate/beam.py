@@ -246,7 +246,6 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
-            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
@@ -260,22 +259,15 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
-            '''
 
+            ## Only consider beam_size x beam_size candidates
             indices = []
             for i in range(self.size):
                 inds = ((prev_k == i).nonzero())[:self.size]
                 indices += [ind[0].item() for ind in inds]
-            print(indices)
 
             ## Saves counts of words seen in candidates so far
             word_counts = dict()
-            '''
-            prev_beam_counts = dict()
-            for b in range(self.size):
-                prev_beam_counts[b] = 0
-            '''
-
             scores_temp = []
             prev_k_temp = []
             next_k_temp = []
@@ -297,16 +289,6 @@ class Beam(object):
 
                 prev_k_temp.append(prev_k[i])
                 next_k_temp.append(next_k[i])
-                
-
-                '''
-                prev_beam_counts[prev_k[i].item()] += 1
-                else:
-                    key_min = min(prev_beam_counts.keys(), key=(lambda k: prev_beam_counts[k]))
-                    if prev_beam_counts[key_min] == self.size:
-                        print(i)
-                        break
-                '''
 
             print(len(scores_temp))
             best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
@@ -315,7 +297,6 @@ class Beam(object):
             prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
-            '''
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER DIVERSE BEAM SEARCH")
             for i in range(self.size):
@@ -329,7 +310,6 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
-            '''
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
