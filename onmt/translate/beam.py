@@ -121,7 +121,10 @@ class Beam(object):
                 word_probs[k][self._eos] = -1e20
         # Sum the previous scores.
         if len(self.prev_ks) > 0:
-            beam_scores = word_probs + self.scores.unsqueeze(1)
+            try:
+                beam_scores = word_probs + self.scores.unsqueeze(1)
+            except RuntimeError:
+                beam_scores = word_probs.double().cuda() + self.scores.unsqueeze(1).double().cuda()
             # Don't let EOS have children.
             for i in range(self.next_ys[-1].size(0)):
                 if self.next_ys[-1][i] == self._eos:
@@ -246,13 +249,14 @@ class Beam(object):
                             indices.append(i)
                             break
 
-            scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
+            best_scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
             #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
             #next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
-            scores, scores_id = scores.sort(0, descending=True)
+            best_scores, scores_id = best_scores.sort(0, descending=True)
             prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER CLUSTERED BEAM SEARCH: ")
             for i in range(len(prev_k)):
@@ -266,6 +270,10 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
+            '''
+
+            self.all_scores.append(self.scores)
+            self.scores = best_scores
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
@@ -347,6 +355,9 @@ class Beam(object):
                     continue
             #######
             '''
+
+            self.all_scores.append(self.scores)
+            self.scores = best_scores
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
