@@ -298,6 +298,7 @@ class Translator(object):
                 inputs, preds, scores = {}, {}, {}
 
                 for i in range(self.beam_iters):
+                    print("HI2")
                     batch_data = self.translate_batch(
                         batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
                     )
@@ -319,11 +320,11 @@ class Translator(object):
                         ## to be added to json_dump later
 
                         print(trans.src_raw)
-                        print(trans.pred_sents[:self.n_best])
-                        print([float(x) for x in trans.pred_scores[:self.n_best]])
-                        
+                        print(trans.pred_sents[:1])
+                        print([float(x) for x in trans.pred_scores[:1]])
+
                         inputs[j] = trans.src_raw
-                        num_outputs = self.n_best
+                        num_outputs = 1
                         #num_outputs = math.ceil(self.n_best / self.beam_iters)
                         try:
                             preds[j] += trans.pred_sents[:num_outputs]
