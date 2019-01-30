@@ -278,7 +278,7 @@ class Beam(object):
             scores_orig = []
 
             for i in indices:
-                if prev_beam_counts[prev_k[i].item()] < self.size:
+                #if prev_beam_counts[prev_k[i].item()] < self.size:
                 ## Gets word count of generated token
                 tok = self.vocab.itos[next_k[i].item()]
                 try:
