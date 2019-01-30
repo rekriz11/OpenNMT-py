@@ -320,7 +320,7 @@ class Beam(object):
                 else:
                     toks = " ".join(current_beam_str[prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]])
 
-                if toks not in prev_hyps and toks != '<unk>':
+                if toks not in self.prev_hyps and toks != '<unk>':
                     scores_temp.append(scores[i].item())
                     non_dups += 1
                     prev_k_temp.append(prev_k[i].item())
