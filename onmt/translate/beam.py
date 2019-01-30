@@ -242,10 +242,10 @@ class Beam(object):
                             indices.append(i)
                             break
 
-            scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
+            best_scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
             #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
             #next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
-            scores, scores_id = scores.sort(0, descending=True)
+            best_scores, scores_id = scores.sort(0, descending=True)
             prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
@@ -262,6 +262,9 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
+
+            self.all_scores.append(self.scores)
+            self.scores = scores
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
@@ -339,6 +342,9 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
+
+            self.all_scores.append(self.scores)
+            self.scores = best_scores
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
