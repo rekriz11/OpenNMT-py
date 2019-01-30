@@ -264,7 +264,7 @@ class Beam(object):
 
             indices = []
             for i in range(self.size):
-                inds = (prev_k == i).nonzero())[:self.size]
+                inds = ((prev_k == i).nonzero())[:self.size]
                 indices += [ind[0].item() for ind in inds]
             print(indices)
 
