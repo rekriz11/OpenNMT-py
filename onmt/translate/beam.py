@@ -248,7 +248,7 @@ class Beam(object):
             best_scores = torch.from_numpy(np.array(cscores, dtype='double')).cuda()
             #prev_k = torch.from_numpy(np.array(cprev_k, dtype='int32')).type(torch.LongTensor).cuda()
             #next_k = torch.from_numpy(np.array(cnext_k, dtype='int32')).type(torch.LongTensor).cuda()
-            best_scores, scores_id = scores.sort(0, descending=True)
+            best_scores, scores_id = best_scores.sort(0, descending=True)
             prev_k = torch.from_numpy(np.array([cprev_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([cnext_k[i] for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
@@ -289,6 +289,7 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
@@ -302,6 +303,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
+            '''
 
             ## Removes all candidates already found in a previous beam search
             scores_temp = []
@@ -332,6 +334,7 @@ class Beam(object):
             prev_k = torch.from_numpy(np.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
             for i in range(len(prev_k)):
@@ -345,6 +348,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
+            '''
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
