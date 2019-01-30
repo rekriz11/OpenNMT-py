@@ -127,6 +127,12 @@ class Translator(object):
 
         self.use_filter_pred = False
 
+        # K per cand argument
+        self.k_per_cand = opt.k_per_cand
+
+        # Diverse beam search argument
+        self.hamming_penalty = opt.hamming_penalty
+
         # Iterative beam search arguments
         self.hamming_dist=opt.hamming_dist
         self.beam_iters=opt.beam_iters
@@ -920,7 +926,9 @@ class Translator(object):
                                     num_clusters=self.num_clusters,
                                     embeddings=self.cluster_embeddings,
                                     prev_hyps=prev_hyps,
-                                    hamming_dist=self.hamming_dist)
+                                    hamming_dist=self.hamming_dist,
+                                    k_per_cand=self.k_per_cand,
+                                    hamming_penalty=self.hamming_penalty)
                 for __ in range(batch_size)]
 
         # (1) Run the encoder on the src.
