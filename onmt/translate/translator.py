@@ -233,8 +233,6 @@ class Translator(object):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
 
-            print("HIIIIII")
-
             ## If number of iterations is 1, continue as normal
             if self.beam_iters == 1:
                 batch_data = self.translate_batch(
@@ -243,7 +241,6 @@ class Translator(object):
                 translations = builder.from_batch(batch_data)
 
                 for trans in translations:
-                    print("HI2")
                     all_scores += [trans.pred_scores[:self.n_best]]
                     pred_score_total += trans.pred_scores[0]
                     pred_words_total += len(trans.pred_sents[0])
@@ -295,10 +292,9 @@ class Translator(object):
                         os.write(1, output.encode('utf-8'))
             # Otherwise, run beam search several times!
             else:
-                inputs, preds, scores = {}, {}, {}
+                input, preds, scores = [], [], []
 
                 for i in range(self.beam_iters):
-                    print("HI2")
                     batch_data = self.translate_batch(
                         batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
                     )
@@ -319,14 +315,14 @@ class Translator(object):
                         ## Saves predictions and scores into dictionary 
                         ## to be added to json_dump later
 
-                        inputs[j] = trans.src_raw
+                        input = trans.src_raw
                         #num_outputs = math.ceil(self.n_best / self.beam_iters)
                         try:
-                            preds[j] += trans.pred_sents[:1]
-                            scores[j] += [float(x) for x in trans.pred_scores[:1]]
+                            preds += trans.pred_sents[:1]
+                            scores += [float(x) for x in trans.pred_scores[:1]]
                         except KeyError:
-                            preds[j] = trans.pred_sents[:self.n_best]
-                            scores[j] = [float(x) for x in trans.pred_scores[:1]]
+                            preds = trans.pred_sents[:self.n_best]
+                            scores = [float(x) for x in trans.pred_scores[:1]]
 
                         if self.verbose:
                             sent_number = next(counter)
@@ -360,16 +356,14 @@ class Translator(object):
                 # Adds output to json_dump
                 print(scores)
                 print(preds)
-                print(inputs)
-                for i in range(max(list(inputs.keys()))):
-                    json_dump.append({
-                        'input': inputs[i],
-                        'pred': preds[i],
-                        'scores': scores[i]
-                    })
+                print(input)
+                json_dump.append({
+                    'input': input,
+                    'pred': preds,
+                    'scores': scores
+                })
 
-                print(json_dump)
-
+        print(json_dump)
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
         print('Saved json with predictions to: %s' % self.out_file.name)
