@@ -199,10 +199,9 @@ class Beam(object):
                     prev_k_temp.append(prev_k[i])
                     next_k_temp.append(next_k[i])
 
-            scores_temp = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
-            best_scores, scores_id = scores_temp.topk(self.size, 0, True, True)
-            prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
-            next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
+            best_scores = torch.from_numpy(np.array(scores_temp[:self.size], dtype='double')).cuda()
+            prev_k = torch.from_numpy(np.array([p.item() for p in prev_k_temp[:self.size]], dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array([n.item() for n in next_k_temp[:self.size]], dtype='int32')).type(torch.LongTensor).cuda()
 
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ONLY CONSIDERING TOP K FOR EACH CANDIDATE: ")
@@ -213,7 +212,7 @@ class Beam(object):
                     toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()   
                 try:
-                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
+                    print(" ".join(toks) + "\t" + str(ind) + "\t" + str(best_scores[i].item()))
                 except UnicodeEncodeError:
                     continue
             ####
