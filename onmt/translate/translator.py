@@ -350,7 +350,7 @@ class Translator(object):
                             os.write(1, output.encode('utf-8'))
 
                 # Adds output to json_dump
-                print(inputs.keys())
+                print(scores)
                 for i in range(max(list(inputs.keys()))):
                     json_dump.append({
                         'input': inputs[i],
