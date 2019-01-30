@@ -249,7 +249,6 @@ class Translator(object):
                 for trans in translations:
                     all_scores += [trans.pred_scores[:self.n_best]]
                     pred_score_total += trans.pred_scores[0]
-                    print(trans.pred_scores[0])
                     pred_words_total += len(trans.pred_sents[0])
                     if tgt is not None:
                         gold_score_total += trans.gold_score
