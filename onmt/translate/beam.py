@@ -165,7 +165,7 @@ class Beam(object):
 
         ## K_PER_CAND CODE
         if current_step > 0 and self.k_per_cand != 0:
-            scores, scores_id = scores.sort(0, descending=True)
+            scores, scores_id = flat_beam_scores.sort(0, descending=True)
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
