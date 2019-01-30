@@ -330,12 +330,12 @@ class Beam(object):
                         #scores_temp += [s.item() for s in scores[i+1:]]
                         break
 
-            best_scores = torch.from_numpy(numpy.array(scores_temp, dtype='double')).cuda()
+            best_scores = torch.from_numpy(np.array(scores_temp, dtype='double')).cuda()
 
             #best_scores, best_scores_id = scores.topk(self.size, 0, True, True)
 
-            prev_k = torch.from_numpy(numpy.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
-            next_k = torch.from_numpy(numpy.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
+            prev_k = torch.from_numpy(np.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
+            next_k = torch.from_numpy(np.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
 
             '''
             #### FOR DEBUGGING (DELETE LATER)
