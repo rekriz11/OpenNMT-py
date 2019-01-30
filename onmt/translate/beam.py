@@ -264,7 +264,7 @@ class Beam(object):
             #######
 
             self.all_scores.append(self.scores)
-            self.scores = scores
+            self.scores = best_scores
 
             self.prev_ks.append(prev_k)
             self.next_ys.append(next_k)
