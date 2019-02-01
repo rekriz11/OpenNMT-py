@@ -239,16 +239,17 @@ class Translator(object):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
 
-            ## If number of iterations is 1, continue as normal
-            if self.beam_iters == 1:
+            input, preds, scores = [], [], []
+            for i in range(self.beam_iters):
                 batch_data = self.translate_batch(
-                    batch, data, attn_debug, builder, fast=self.fast
+                    batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
                 )
                 translations = builder.from_batch(batch_data)
 
-                for trans in translations:
+                for j, trans in enumerate(translations):
                     all_scores += [trans.pred_scores[:self.n_best]]
-                    pred_score_total += trans.pred_scores[0]
+                    pred_score_total += trans.pred_scores[0].double().cuda()
+
                     pred_words_total += len(trans.pred_sents[0])
                     if tgt is not None:
                         gold_score_total += trans.gold_score
@@ -258,11 +259,17 @@ class Translator(object):
                                     for pred in trans.pred_sents[:self.n_best]]
                     all_predictions += [n_best_preds]
 
-                    json_dump.append({
-                        'input': trans.src_raw,
-                        'pred': trans.pred_sents[:self.n_best],
-                        'scores': [float(x) for x in trans.pred_scores[:self.n_best]]
-                    })
+                    ## Saves predictions and scores into dictionary 
+                    ## to be added to json_dump later
+
+                    input = trans.src_raw
+                    #num_outputs = math.ceil(self.n_best / self.beam_iters)
+                    if self.beam_iters == 1:
+                        preds += trans.pred_sents[:self.n_best]
+                        scores += [float(x) for x in trans.pred_scores[:self.n_best]]
+                    else:
+                        preds = trans.pred_sents[:1]
+                        scores = [float(x) for x in trans.pred_scores[:1]]
 
                     if self.verbose:
                         sent_number = next(counter)
@@ -292,76 +299,13 @@ class Translator(object):
                             output += row_format.format(word, *row) + '\n'
                             row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
-            # Otherwise, run beam search several times!
-            else:
-                input, preds, scores = [], [], []
 
-                for i in range(self.beam_iters):
-                    batch_data = self.translate_batch(
-                        batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
-                    )
-                    translations = builder.from_batch(batch_data)
-
-                    for j, trans in enumerate(translations):
-                        all_scores += [trans.pred_scores[:self.n_best]]
-                        pred_score_total += trans.pred_scores[0].double().cuda()
-
-                        pred_words_total += len(trans.pred_sents[0])
-                        if tgt is not None:
-                            gold_score_total += trans.gold_score
-                            gold_words_total += len(trans.gold_sent) + 1
-
-                        n_best_preds = [" ".join(pred)
-                                        for pred in trans.pred_sents[:self.n_best]]
-                        all_predictions += [n_best_preds]
-
-                        ## Saves predictions and scores into dictionary 
-                        ## to be added to json_dump later
-
-                        input = trans.src_raw
-                        #num_outputs = math.ceil(self.n_best / self.beam_iters)
-                        try:
-                            preds += trans.pred_sents[:1]
-                            scores += [float(x) for x in trans.pred_scores[:1]]
-                        except KeyError:
-                            preds = trans.pred_sents[:self.n_best]
-                            scores = [float(x) for x in trans.pred_scores[:1]]
-
-                        if self.verbose:
-                            sent_number = next(counter)
-                            output = trans.log(sent_number)
-                            if self.logger:
-                                self.logger.info(output)
-                            else:
-                                os.write(1, output.encode('utf-8'))
-
-                        if attn_debug:
-                            preds = trans.pred_sents[0]
-                            preds.append('</s>')
-                            attns = trans.attns[0].tolist()
-                            if self.data_type == 'text':
-                                srcs = trans.src_raw
-                            else:
-                                srcs = [str(item) for item in range(len(attns[0]))]
-                            header_format = "{:>10.10} " + "{:>10.7} " * len(srcs)
-                            row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
-                            output = header_format.format("", *srcs) + '\n'
-                            for word, row in zip(preds, attns):
-                                max_index = row.index(max(row))
-                                row_format = row_format.replace(
-                                    "{:>10.7f} ", "{:*>10.7f} ", max_index + 1)
-                                row_format = row_format.replace(
-                                    "{:*>10.7f} ", "{:>10.7f} ", max_index)
-                                output += row_format.format(word, *row) + '\n'
-                                row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
-                            os.write(1, output.encode('utf-8'))
-
-                # Adds output to json_dump
-                json_dump.append({
-                    'input': input,
-                    'pred': preds,
-                    'scores': scores
-                })
+            # Adds output to json_dump
+            json_dump.append({
+                'input': input,
+                'pred': preds,
+                'scores': scores
+            })
 
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
