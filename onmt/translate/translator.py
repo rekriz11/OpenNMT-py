@@ -220,7 +220,7 @@ class Translator(object):
         all_scores = []
         all_predictions = []
 
-        json_dump = []
+        results = []
 
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
@@ -242,7 +242,7 @@ class Translator(object):
                                 for pred in trans.pred_sents[:self.n_best]]
                 all_predictions += [n_best_preds]
 
-                json_dump.append({
+                results.append({
                     'input': trans.src_raw,
                     'pred': trans.pred_sents[:self.n_best],
                     'scores': [float(x) for x in trans.pred_scores[:self.n_best]]
@@ -276,6 +276,13 @@ class Translator(object):
                         output += row_format.format(word, *row) + '\n'
                         row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                     os.write(1, output.encode('utf-8'))
+
+        # Save the results to json.
+        json_dump = {
+          'results': results,
+          'score': float(pred_score_total / pred_words_total),
+          'ppl': math.exp(-pred_score_total / pred_words_total)
+        }
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
         print('Saved json with predictions to: %s' % self.out_file.name)
