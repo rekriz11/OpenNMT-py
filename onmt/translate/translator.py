@@ -127,6 +127,17 @@ class Translator(object):
 
         self.use_filter_pred = False
 
+        # K per cand argument
+        self.k_per_cand = opt.k_per_cand
+
+        # Diverse beam search argument
+        self.hamming_penalty = opt.hamming_penalty
+
+        # Iterative beam search arguments
+        self.hamming_dist=opt.hamming_dist
+        self.beam_iters=opt.beam_iters
+
+        # Clustered beam search arguments
         self.num_clusters = opt.num_clusters
         self.cluster_embeddings_file = opt.cluster_embeddings_file
 
@@ -225,57 +236,76 @@ class Translator(object):
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
         for batch in data_iter:
-            batch_data = self.translate_batch(
-                batch, data, attn_debug, builder, fast=self.fast
-            )
-            translations = builder.from_batch(batch_data)
+            ## Reinitialize previous hypotheses
+            self.prev_hyps = []
 
-            for trans in translations:
-                all_scores += [trans.pred_scores[:self.n_best]]
-                pred_score_total += trans.pred_scores[0]
-                pred_words_total += len(trans.pred_sents[0])
-                if tgt is not None:
-                    gold_score_total += trans.gold_score
-                    gold_words_total += len(trans.gold_sent) + 1
+            input, preds, scores = [], [], []
+            for i in range(self.beam_iters):
+                batch_data = self.translate_batch(
+                    batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
+                )
+                translations = builder.from_batch(batch_data)
 
-                n_best_preds = [" ".join(pred)
-                                for pred in trans.pred_sents[:self.n_best]]
-                all_predictions += [n_best_preds]
+                for j, trans in enumerate(translations):
+                    all_scores += [trans.pred_scores[:self.n_best]]
+                    pred_score_total += trans.pred_scores[0].double().cuda()
 
-                results.append({
-                    'input': trans.src_raw,
-                    'pred': trans.pred_sents[:self.n_best],
-                    'scores': [float(x) for x in trans.pred_scores[:self.n_best]]
-                })
+                    pred_words_total += len(trans.pred_sents[0])
+                    if tgt is not None:
+                        gold_score_total += trans.gold_score
+                        gold_words_total += len(trans.gold_sent) + 1
 
-                if self.verbose:
-                    sent_number = next(counter)
-                    output = trans.log(sent_number)
-                    if self.logger:
-                        self.logger.info(output)
+                    n_best_preds = [" ".join(pred)
+                                    for pred in trans.pred_sents[:self.n_best]]
+                    all_predictions += [n_best_preds]
+
+                    ## Saves predictions and scores into dictionary 
+                    ## to be added to final results later
+
+                    input = trans.src_raw
+                    #num_outputs = math.ceil(self.n_best / self.beam_iters)
+                    if self.beam_iters == 1:
+                        preds += trans.pred_sents[:self.n_best]
+                        scores += [float(x) for x in trans.pred_scores[:self.n_best]]
                     else:
+                        preds = trans.pred_sents[:1]
+                        scores = [float(x) for x in trans.pred_scores[:1]]
+
+                    if self.verbose:
+                        sent_number = next(counter)
+                        output = trans.log(sent_number)
+                        if self.logger:
+                            self.logger.info(output)
+                        else:
+                            os.write(1, output.encode('utf-8'))
+
+                    if attn_debug:
+                        preds = trans.pred_sents[0]
+                        preds.append('</s>')
+                        attns = trans.attns[0].tolist()
+                        if self.data_type == 'text':
+                            srcs = trans.src_raw
+                        else:
+                            srcs = [str(item) for item in range(len(attns[0]))]
+                        header_format = "{:>10.10} " + "{:>10.7} " * len(srcs)
+                        row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
+                        output = header_format.format("", *srcs) + '\n'
+                        for word, row in zip(preds, attns):
+                            max_index = row.index(max(row))
+                            row_format = row_format.replace(
+                                "{:>10.7f} ", "{:*>10.7f} ", max_index + 1)
+                            row_format = row_format.replace(
+                                "{:*>10.7f} ", "{:>10.7f} ", max_index)
+                            output += row_format.format(word, *row) + '\n'
+                            row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
 
-                if attn_debug:
-                    preds = trans.pred_sents[0]
-                    preds.append('</s>')
-                    attns = trans.attns[0].tolist()
-                    if self.data_type == 'text':
-                        srcs = trans.src_raw
-                    else:
-                        srcs = [str(item) for item in range(len(attns[0]))]
-                    header_format = "{:>10.10} " + "{:>10.7} " * len(srcs)
-                    row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
-                    output = header_format.format("", *srcs) + '\n'
-                    for word, row in zip(preds, attns):
-                        max_index = row.index(max(row))
-                        row_format = row_format.replace(
-                            "{:>10.7f} ", "{:*>10.7f} ", max_index + 1)
-                        row_format = row_format.replace(
-                            "{:*>10.7f} ", "{:>10.7f} ", max_index)
-                        output += row_format.format(word, *row) + '\n'
-                        row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
-                    os.write(1, output.encode('utf-8'))
+            # Adds output to json_dump
+            results.append({
+                'input': input,
+                'pred': preds,
+                'scores': scores
+            })
 
         # Save the results to json.
         json_dump = {
@@ -285,7 +315,6 @@ class Translator(object):
         }
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
-        print('Saved json with predictions to: %s' % self.out_file.name)
 
         if self.report_score:
             msg = self._report_score('PRED', pred_score_total,
@@ -460,7 +489,7 @@ class Translator(object):
 
         return results
 
-    def translate_batch(self, batch, data, attn_debug, builder, fast=False):
+    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[]):
         """
         Translate a batch of sentences.
 
@@ -494,7 +523,7 @@ class Translator(object):
                     n_best=self.n_best,
                     return_attention=attn_debug or self.replace_unk)
             else:
-                return self._translate_batch(batch, data, builder)
+                return self._translate_batch(batch, data, builder, prev_hyps)
 
     def _run_encoder(self, batch, data_type):
         src = inputters.make_features(batch, 'src', data_type)
@@ -812,8 +841,8 @@ class Translator(object):
                 except KeyError:
                     not_found += 1
                     vocab_embeds[word] = np.array([0.0 for i in range(300)])
-        print("Done. Filtered to ",len(vocab_embeds)," words!")
         '''
+        print("Done. Filtered to ",len(vocab_embeds)," words!")
         print("Found: " + str(found))
         print("Only lower: " + str(only_lower))
         print("Not found: " + str(not_found))
@@ -821,7 +850,7 @@ class Translator(object):
 
         return vocab_embeds
 
-    def _translate_batch(self, batch, data, builder):
+    def _translate_batch(self, batch, data, builder, prev_hyps):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -845,7 +874,11 @@ class Translator(object):
                                     block_ngram_repeat=self.block_ngram_repeat,
                                     exclusion_tokens=exclusion_tokens,
                                     num_clusters=self.num_clusters,
-                                    embeddings=self.cluster_embeddings)
+                                    embeddings=self.cluster_embeddings,
+                                    prev_hyps=prev_hyps,
+                                    hamming_dist=self.hamming_dist,
+                                    k_per_cand=self.k_per_cand,
+                                    hamming_penalty=self.hamming_penalty)
                 for __ in range(batch_size)]
 
         # (1) Run the encoder on the src.
@@ -878,6 +911,9 @@ class Translator(object):
         else:
             memory_bank = tile(memory_bank, beam_size, dim=1)
         memory_lengths = tile(src_lengths, beam_size)
+
+        # Saves new hypotheses
+        new_hyps = []
 
         # (3) run the decoder to generate sentences, using beam search.
         for i in range(self.max_length):
@@ -912,6 +948,7 @@ class Translator(object):
                         ret2["gold_score"] = self._run_target(batch, data)
                     ret2["batch"] = batch
                     current_beam = self.debug_translation(ret2, builder, fins)[0]
+                new_hyps += current_beam
 
                 b.advance(out[j, :],
                           beam_attn.data[j, :, :memory_lengths[j]], current_beam, i)
@@ -921,6 +958,9 @@ class Translator(object):
 
             self.model.decoder.map_state(
                 lambda state, dim: state.index_select(dim, select_indices))
+
+        # Adds all partial hypotheses to prev_hyps for the next iteration of beam search
+        self.prev_hyps += new_hyps
 
         # (4) Extract sentences from beam.
         for b in beam:
@@ -936,7 +976,7 @@ class Translator(object):
 
         return results
 
-    ## ADDED CODE: gets current beam
+    ## Gets current beam
     def _from_current_beam(self, beam):
         ret = {"predictions": [],
                "scores": [],
@@ -954,7 +994,7 @@ class Translator(object):
             ret["attention"].append(attn)
         return ret, fins
 
-    ## Gets current beam
+    ## Converts current beam in human-readable format
     def debug_translation(self, batch_data, builder, fins):
         translations = builder.from_batch(batch_data)
         all_scores = []

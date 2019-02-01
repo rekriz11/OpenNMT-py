@@ -633,12 +633,31 @@ def translate_opts(parser):
               help="""Using grayscale image can training
                        model faster and smaller""")
 
+    # Options related to iterative beam search
+    group.add('--beam_iters', '-beam_iters',
+              type=int, default=1,
+              help="Number of iterations to run beam search")
+    group.add('--hamming_dist', '-hamming_dist',
+              type=int, default=1,
+              help="Minimum distance necessary to not set probability to -infinity")
+
+    # Options related to clustered beam search
     group.add('--num_clusters', '-num_clusters',
               type=int, default=1,
               help='Number of clusters if using clustered beam search')
     group.add('--cluster_embeddings_file', '-cluster_embeddings_file', 
               type=str, default='',
               help='Embeddings file if using clustered beam search.')
+
+    # Option relating to k_per_cand
+    group.add('--k_per_cand', '-k_per_cand',
+              type=int, default=0,
+              help='Number of candidates allowed per beam hypothesis')
+
+    # Option relating to diverse beam search
+    group.add('--hamming_penalty', '-hamming_penalty',
+              type=float, default=0.0,
+              help='Hamming Penalty for overlapping candidates')
 
 
 def add_md_help_argument(parser):
