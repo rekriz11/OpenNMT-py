@@ -910,6 +910,7 @@ class Translator(object):
         new_hyps = []
 
         # (3) run the decoder to generate sentences, using beam search.
+        print("\n\n\n")
         for i in range(self.max_length):
             if all((b.done() for b in beam)):
                 break
