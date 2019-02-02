@@ -588,7 +588,7 @@ class Beam(object):
             while len(self.finished) < minimum:
                 global_scores = self.global_scorer.score(self, self.scores)
                 s = global_scores[i]
-                self.finished.append((s, len(self.next_ys) - 1, i))
+                self.finished.append((s.double(), len(self.next_ys) - 1, i))
                 i += 1
 
         self.finished.sort(key=lambda a: -a[0])
