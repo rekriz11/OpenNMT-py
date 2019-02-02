@@ -591,7 +591,11 @@ class Beam(object):
                 self.finished.append((s.double(), len(self.next_ys) - 1, i))
                 i += 1
 
-        self.finished.sort(key=lambda a: -a[0])
+        try:
+            self.finished.sort(key=lambda a: -a[0])
+        except RuntimeError:
+            print(self.finished)
+            self.finished.sort(key=lambda a: -a[0])
         scores = [sc for sc, _, _ in self.finished]
         ks = [(t, k) for _, t, k in self.finished]
         return scores, ks
