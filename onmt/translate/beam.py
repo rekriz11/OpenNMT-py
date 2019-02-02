@@ -591,11 +591,7 @@ class Beam(object):
                 self.finished.append((s.double(), len(self.next_ys) - 1, i))
                 i += 1
 
-        try:
-            self.finished.sort(key=lambda a: -a[0])
-        except RuntimeError:
-            print(self.finished)
-            self.finished.sort(key=lambda a: -a[0])
+        self.finished.sort(key=lambda a: -a[0])
         scores = [sc for sc, _, _ in self.finished]
         ks = [(t, k) for _, t, k in self.finished]
         return scores, ks
@@ -623,12 +619,7 @@ class Beam(object):
             self.current_beam_str.append((s.double(), len(self.next_ys) - 1, i, fin))
 
         ## Sorts the beam
-
-        try:
-            self.current_beam_str.sort(key=lambda a: -a[0])
-        except RuntimeError:
-            print(self.current_beam_str)
-            self.current_beam_str.sort(key=lambda a: -a[0])
+        self.current_beam_str.sort(key=lambda a: -a[0])
         scores = [sc for sc, _, _, _ in self.current_beam_str]
         ks = [(t, k) for _, t, k, _ in self.current_beam_str]
         fins = [f for _, _, _, f in self.current_beam_str]

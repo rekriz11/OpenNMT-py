@@ -238,8 +238,6 @@ class Translator(object):
         for num, batch in enumerate(data_iter):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
-            print("\n\n\n" + str(num))
-
             input, preds, scores = [], [], []
             for i in range(self.beam_iters):
                 batch_data = self.translate_batch(
