@@ -363,7 +363,6 @@ class Beam(object):
                     try:
                         cand_embeds.append(self.embeddings[t])
                     except KeyError:
-                        print("No embedding for: " + str(t))
                         cand_embeds.append(np.array([0 for i in range(300)]))
                 embeds.append(sum(cand_embeds)/len(cand_embeds))
             std_embeds = whiten(embeds)
