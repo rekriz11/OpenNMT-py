@@ -358,7 +358,13 @@ class Beam(object):
                 else:
                     toks = current_beam_str[prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
 
-                cand_embeds = [self.embeddings[t] for t in toks]
+                cand_embeds = []
+                for t in toks:
+                    try:
+                        cand_embeds.append(self.embeddings[t])
+                    except KeyError:
+                        print("No embedding for: " + str(t))
+                        cand_embeds.append(np.array([0 for i in range(300)]))
                 embeds.append(sum(cand_embeds)/len(cand_embeds))
             std_embeds = whiten(embeds)
 
