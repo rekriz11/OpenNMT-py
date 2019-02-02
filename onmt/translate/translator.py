@@ -235,14 +235,14 @@ class Translator(object):
 
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
-        for batch in data_iter:
+        for num, batch in enumerate(data_iter):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
 
             input, preds, scores = [], [], []
             for i in range(self.beam_iters):
                 batch_data = self.translate_batch(
-                    batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps
+                    batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps, num=num
                 )
                 translations = builder.from_batch(batch_data)
 
@@ -483,7 +483,7 @@ class Translator(object):
 
         return results
 
-    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[]):
+    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[], num=num):
         """
         Translate a batch of sentences.
 
@@ -517,7 +517,7 @@ class Translator(object):
                     n_best=self.n_best,
                     return_attention=attn_debug or self.replace_unk)
             else:
-                return self._translate_batch(batch, data, builder, prev_hyps)
+                return self._translate_batch(batch, data, builder, prev_hyps, num)
 
     def _run_encoder(self, batch, data_type):
         src = inputters.make_features(batch, 'src', data_type)
@@ -844,7 +844,7 @@ class Translator(object):
 
         return vocab_embeds
 
-    def _translate_batch(self, batch, data, builder, prev_hyps):
+    def _translate_batch(self, batch, data, builder, prev_hyps, num):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -910,7 +910,7 @@ class Translator(object):
         new_hyps = []
 
         # (3) run the decoder to generate sentences, using beam search.
-        print("\n\n\n")
+        print("\n\n\n" + str(num))
         for i in range(self.max_length):
             if all((b.done() for b in beam)):
                 break
