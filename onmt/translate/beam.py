@@ -231,7 +231,7 @@ class Beam(object):
                 if self.next_ys[-1][i] == self._eos:
                     global_scores = self.global_scorer.score(self, self.scores)
                     s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
+                    self.finished.append((s.double(), len(self.next_ys) - 1, i))
 
             # End condition is when top-of-beam is EOS and no global score.
             if self.next_ys[-1][0] == self._eos:
@@ -321,7 +321,7 @@ class Beam(object):
                 if self.next_ys[-1][i] == self._eos:
                     global_scores = self.global_scorer.score(self, self.scores)
                     s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
+                    self.finished.append((s.double(), len(self.next_ys) - 1, i))
 
             # End condition is when top-of-beam is EOS and no global score.
             if self.next_ys[-1][0] == self._eos:
@@ -358,7 +358,12 @@ class Beam(object):
                 else:
                     toks = current_beam_str[prev_k[i]].split(" ") + [self.vocab.itos[next_k[i].item()]]
 
-                cand_embeds = [self.embeddings[t] for t in toks]
+                cand_embeds = []
+                for t in toks:
+                    try:
+                        cand_embeds.append(self.embeddings[t])
+                    except KeyError:
+                        cand_embeds.append(np.array([0 for i in range(300)]))
                 embeds.append(sum(cand_embeds)/len(cand_embeds))
             std_embeds = whiten(embeds)
 
@@ -455,7 +460,7 @@ class Beam(object):
                 if self.next_ys[-1][i] == self._eos:
                     global_scores = self.global_scorer.score(self, self.scores)
                     s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
+                    self.finished.append((s.double(), len(self.next_ys) - 1, i))
 
             # End condition is when top-of-beam is EOS and no global score.
             if self.next_ys[-1][0] == self._eos:
@@ -541,7 +546,7 @@ class Beam(object):
                 if self.next_ys[-1][i] == self._eos:
                     global_scores = self.global_scorer.score(self, self.scores)
                     s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
+                    self.finished.append((s.double(), len(self.next_ys) - 1, i))
 
             # End condition is when top-of-beam is EOS and no global score.
             if self.next_ys[-1][0] == self._eos:
@@ -568,7 +573,7 @@ class Beam(object):
                 if self.next_ys[-1][i] == self._eos:
                     global_scores = self.global_scorer.score(self, self.scores)
                     s = global_scores[i]
-                    self.finished.append((s, len(self.next_ys) - 1, i))
+                    self.finished.append((s.double(), len(self.next_ys) - 1, i))
 
             # End condition is when top-of-beam is EOS and no global score.
             if self.next_ys[-1][0] == self._eos:
@@ -588,7 +593,7 @@ class Beam(object):
             while len(self.finished) < minimum:
                 global_scores = self.global_scorer.score(self, self.scores)
                 s = global_scores[i]
-                self.finished.append((s, len(self.next_ys) - 1, i))
+                self.finished.append((s.double(), len(self.next_ys) - 1, i))
                 i += 1
 
         self.finished.sort(key=lambda a: -a[0])
@@ -616,7 +621,7 @@ class Beam(object):
             else:
                 fin = False
 
-            self.current_beam_str.append((s, len(self.next_ys) - 1, i, fin))
+            self.current_beam_str.append((s.double(), len(self.next_ys) - 1, i, fin))
 
         ## Sorts the beam
         self.current_beam_str.sort(key=lambda a: -a[0])
