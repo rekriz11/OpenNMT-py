@@ -483,7 +483,7 @@ class Translator(object):
 
         return results
 
-    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[], num=num):
+    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[], num=0):
         """
         Translate a batch of sentences.
 
