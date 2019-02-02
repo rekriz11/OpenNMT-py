@@ -619,8 +619,8 @@ class Beam(object):
             self.current_beam_str.append((s, len(self.next_ys) - 1, i, fin))
 
         ## Sorts the beam
-        print(current_beam_str)
-        
+        print(self.current_beam_str)
+
         self.current_beam_str.sort(key=lambda a: -a[0])
         scores = [sc for sc, _, _, _ in self.current_beam_str]
         ks = [(t, k) for _, t, k, _ in self.current_beam_str]
