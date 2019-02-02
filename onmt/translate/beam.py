@@ -616,7 +616,7 @@ class Beam(object):
             else:
                 fin = False
 
-            self.current_beam_str.append((s, len(self.next_ys) - 1, i, fin))
+            self.current_beam_str.append((s.double(), len(self.next_ys) - 1, i, fin))
 
         ## Sorts the beam
 
