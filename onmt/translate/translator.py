@@ -242,12 +242,14 @@ class Translator(object):
             self.prev_hyps = []
             input, preds, scores = [], [], []
             for i in range(self.beam_iters):
+                print("Iteration: " + str(i))
                 batch_data = self.translate_batch(
                     batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps,
                 )
                 translations = builder.from_batch(batch_data)
 
                 for j, trans in enumerate(translations):
+                    print("Translation: " + str(j))
                     all_scores += [trans.pred_scores[:self.n_best]]
                     pred_score_total += trans.pred_scores[0].double().cuda()
 
