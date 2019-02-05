@@ -238,13 +238,14 @@ class Translator(object):
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
         for num, batch in enumerate(data_iter):
+            print("BATCH: " + str(num))
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
             input, preds, scores = [], [], []
             for i in range(self.beam_iters):
                 print("Iteration: " + str(i))
                 batch_data = self.translate_batch(
-                    batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps,
+                    batch, data, attn_debug, builder, fast=self.fast,
                 )
                 translations = builder.from_batch(batch_data)
 
@@ -493,7 +494,7 @@ class Translator(object):
 
         return results
 
-    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[], num=0):
+    def translate_batch(self, batch, data, attn_debug, builder, fast=False):
         """
         Translate a batch of sentences.
 
@@ -527,7 +528,7 @@ class Translator(object):
                     n_best=self.n_best,
                     return_attention=attn_debug or self.replace_unk)
             else:
-                return self._translate_batch(batch, data, builder, prev_hyps)
+                return self._translate_batch(batch, data, builder)
 
     def _run_encoder(self, batch, data_type):
         src = inputters.make_features(batch, 'src', data_type)
@@ -865,7 +866,7 @@ class Translator(object):
 
         return vocab_embeds
 
-    def _translate_batch(self, batch, data, builder, prev_hyps):
+    def _translate_batch(self, batch, data, builder):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -890,7 +891,7 @@ class Translator(object):
                                     exclusion_tokens=exclusion_tokens,
                                     num_clusters=self.num_clusters,
                                     embeddings=self.cluster_embeddings,
-                                    prev_hyps=prev_hyps,
+                                    prev_hyps=self.prev_hyps,
                                     hamming_dist=self.hamming_dist,
                                     k_per_cand=self.k_per_cand,
                                     hamming_penalty=self.hamming_penalty)
