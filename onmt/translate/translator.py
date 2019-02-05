@@ -268,7 +268,7 @@ class Translator(object):
                     ## Saves predictions and scores into dictionary 
                     ## to be added to final results later
 
-                    input = trans.src_raw
+                    input[j] = trans.src_raw
                     if self.beam_iters == 1:
                         preds[j] += trans.pred_sents[:self.n_best]
                         scores[j] += [float(x) for x in trans.pred_scores[:self.n_best]]
