@@ -273,11 +273,9 @@ class Translator(object):
                         scores[j] = [float(x) for x in trans.pred_scores[:self.n_best]]
                     else:
                         ## Checks if top candidate is empty (TODO: why is this happening?)
-                        print(trans.pred_sents[:self.n_best])
                         k = 0
                         while trans.pred_sents[k] == []:
                             k += 1 
-                        print([trans.pred_sents[k]])
                         preds[j] += [trans.pred_sents[k]]
                         scores[j] += [float(trans.pred_scores[k])]
                         
