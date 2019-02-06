@@ -274,8 +274,8 @@ class Translator(object):
                     else:
                         preds[j] += trans.pred_sents[:1]
                         scores[j] += [float(x) for x in trans.pred_scores[:1]]
-                        print(preds[j])
-                        print(scores[j])
+                        print(trans.pred_sents[:self.n_best])
+                        print([float(x) for x in trans.pred_scores[:self.n_best]])
 
 
                     if self.verbose:
