@@ -274,8 +274,8 @@ class Translator(object):
                     else:
                         preds[j] += trans.pred_sents[:1]
                         scores[j] += [float(x) for x in trans.pred_scores[:1]]
-                        print(trans.pred_sents[:self.n_best])
-                        print([float(x) for x in trans.pred_scores[:self.n_best]])
+                        #print(trans.pred_sents[:self.n_best])
+                        #print([float(x) for x in trans.pred_scores[:self.n_best]])
 
 
                     if self.verbose:
@@ -307,10 +307,11 @@ class Translator(object):
                             row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
 
-            print(preds[j])
-            print(scores[j])
+
             # Adds output to json_dump
             for j in range(batch_size):
+                print(preds[j])
+                print(scores[j])
                 results.append({
                     'input': input[j],
                     'pred': preds[j],
