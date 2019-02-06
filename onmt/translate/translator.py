@@ -252,7 +252,6 @@ class Translator(object):
                 translations = builder.from_batch(batch_data)
 
                 for j, trans in enumerate(translations):
-                    print("Translation: " + str(j))
                     all_scores += [trans.pred_scores[:self.n_best]]
                     pred_score_total += trans.pred_scores[0].double().cuda()
 
@@ -275,6 +274,9 @@ class Translator(object):
                     else:
                         preds[j] += trans.pred_sents[:1]
                         scores[j] += [float(x) for x in trans.pred_scores[:1]]
+                        print(preds[j])
+                        print(scores[j])
+
 
                     if self.verbose:
                         sent_number = next(counter)
