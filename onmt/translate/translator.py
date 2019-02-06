@@ -240,10 +240,12 @@ class Translator(object):
         for num, batch in enumerate(data_iter):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
-            input, preds, scores = [], [], []
+            input = ["" for i in range(batch.batch_size)]
+            preds = [[] for i in range(batch.batch_size)]
+            scores = [[] for i in range(batch.batch_size)]
             for i in range(self.beam_iters):
                 batch_data = self.translate_batch(
-                    batch, data, attn_debug, builder, fast=self.fast, prev_hyps=self.prev_hyps,
+                    batch, data, attn_debug, builder, fast=self.fast,
                 )
                 translations = builder.from_batch(batch_data)
 
@@ -263,14 +265,19 @@ class Translator(object):
                     ## Saves predictions and scores into dictionary 
                     ## to be added to final results later
 
-                    input = trans.src_raw
-                    #num_outputs = math.ceil(self.n_best / self.beam_iters)
+                    input[j] = trans.src_raw
                     if self.beam_iters == 1:
-                        preds += trans.pred_sents[:self.n_best]
-                        scores += [float(x) for x in trans.pred_scores[:self.n_best]]
+                        preds[j] = trans.pred_sents[:self.n_best]
+                        scores[j] = [float(x) for x in trans.pred_scores[:self.n_best]]
                     else:
-                        preds = trans.pred_sents[:1]
-                        scores = [float(x) for x in trans.pred_scores[:1]]
+                        ## Checks if top candidate is empty (TODO: why is this happening?)
+                        k = 0
+                        while trans.pred_sents[k] == []:
+                            k += 1 
+                        preds[j] += [trans.pred_sents[k]]
+                        scores[j] += [float(trans.pred_scores[k])]
+                        
+
 
                     if self.verbose:
                         sent_number = next(counter)
@@ -281,8 +288,8 @@ class Translator(object):
                             os.write(1, output.encode('utf-8'))
 
                     if attn_debug:
-                        preds = trans.pred_sents[0]
-                        preds.append('</s>')
+                        preds[j] = trans.pred_sents[0]
+                        preds[j].append('</s>')
                         attns = trans.attns[0].tolist()
                         if self.data_type == 'text':
                             srcs = trans.src_raw
@@ -301,12 +308,14 @@ class Translator(object):
                             row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
 
+
             # Adds output to json_dump
-            results.append({
-                'input': input,
-                'pred': preds,
-                'scores': scores
-            })
+            for j in range(batch_size):
+                results.append({
+                    'input': input[j],
+                    'pred': preds[j],
+                    'scores': scores[j]
+                })
 
         # Save the results to json.
         json_dump = {
@@ -491,7 +500,7 @@ class Translator(object):
 
         return results
 
-    def translate_batch(self, batch, data, attn_debug, builder, fast=False, prev_hyps=[], num=0):
+    def translate_batch(self, batch, data, attn_debug, builder, fast=False):
         """
         Translate a batch of sentences.
 
@@ -525,7 +534,7 @@ class Translator(object):
                     n_best=self.n_best,
                     return_attention=attn_debug or self.replace_unk)
             else:
-                return self._translate_batch(batch, data, builder, prev_hyps)
+                return self._translate_batch(batch, data, builder)
 
     def _run_encoder(self, batch, data_type):
         src = inputters.make_features(batch, 'src', data_type)
@@ -863,7 +872,7 @@ class Translator(object):
 
         return vocab_embeds
 
-    def _translate_batch(self, batch, data, builder, prev_hyps):
+    def _translate_batch(self, batch, data, builder):
         # (0) Prep each of the components of the search.
         # And helper method for reducing verbosity.
         beam_size = self.beam_size
@@ -888,7 +897,7 @@ class Translator(object):
                                     exclusion_tokens=exclusion_tokens,
                                     num_clusters=self.num_clusters,
                                     embeddings=self.cluster_embeddings,
-                                    prev_hyps=prev_hyps,
+                                    prev_hyps=self.prev_hyps,
                                     hamming_dist=self.hamming_dist,
                                     k_per_cand=self.k_per_cand,
                                     hamming_penalty=self.hamming_penalty)

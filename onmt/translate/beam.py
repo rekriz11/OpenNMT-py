@@ -138,6 +138,11 @@ class Beam(object):
                 if self.next_ys[-1][i] == self._eos:
                     beam_scores[i] = -1e20
 
+            # Force the response to not be empty
+            if current_step == 1:
+                for k in range(len(word_probs)):
+                    word_probs[k][self._eos] = -10e20
+
             # Block ngram repeats
             if self.block_ngram_repeat > 0:
                 ngrams = []
