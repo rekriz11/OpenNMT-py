@@ -238,8 +238,6 @@ class Translator(object):
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
         for num, batch in enumerate(data_iter):
-            if num % 1 == 0:
-                print("BATCH: " + str(num))
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
             input = ["" for i in range(batch.batch_size)]
