@@ -307,6 +307,8 @@ class Translator(object):
                             row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
 
+            print(preds[j])
+            print(scores[j])
             # Adds output to json_dump
             for j in range(batch_size):
                 results.append({
