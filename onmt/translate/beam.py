@@ -139,8 +139,8 @@ class Beam(object):
                     beam_scores[i] = -1e20
 
             # Force the response to not be empty
-            print(current_step)
-            if current_step == 0:
+            if current_step == 1:
+                print("hi")
                 for k in range(len(word_probs)):
                     word_probs[k][self._eos] = -10e20
 
