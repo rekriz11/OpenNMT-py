@@ -238,12 +238,14 @@ class Translator(object):
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
         for num, batch in enumerate(data_iter):
+            print("Batch: " + str(num))
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
             input = ["" for i in range(batch.batch_size)]
             preds = [[] for i in range(batch.batch_size)]
             scores = [[] for i in range(batch.batch_size)]
             for i in range(self.beam_iters):
+                print("Iteration: " + str(i)) 
                 batch_data = self.translate_batch(
                     batch, data, attn_debug, builder, fast=self.fast,
                 )
