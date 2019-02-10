@@ -137,6 +137,8 @@ class Translator(object):
 
         # Iterative beam search arguments
         self.hamming_dist=opt.hamming_dist
+
+        print(opt.beam_iters)
         self.beam_iters=opt.beam_iters
 
         # Clustered beam search arguments
