@@ -81,7 +81,6 @@ class Translator(object):
         report_score=True,
         logger=None
     ):
-
         self.model = model
         self.fields = fields
         self.gpu = opt.gpu
