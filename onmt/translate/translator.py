@@ -235,6 +235,8 @@ class Translator(object):
 
         results = []
 
+        print("Number of iterations: " + str(self.beam_iters))
+
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
         for num, batch in enumerate(data_iter):
