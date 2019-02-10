@@ -581,13 +581,15 @@ class Translator(object):
         dec_out, dec_attn = self.model.decoder(
             decoder_in, memory_bank, memory_lengths=memory_lengths, step=step
         )
- 
-        # Add random noise to the decoder hidden state
-        hidden = self.model.decoder.state["hidden"]
 
-        sigma = self.hidden_state_noise / (step+1)
-        random_noise = torch.cuda.FloatTensor(hidden[0].size()).normal_(0, sigma) 
-        self.model.decoder.state["hidden"] = (hidden[0] + random_noise, hidden[1])
+
+        if self.hidden_state_noise != 0.0:
+            # Add random noise to the decoder hidden state
+            hidden = self.model.decoder.state["hidden"]
+
+            sigma = self.hidden_state_noise / (step+1)
+            random_noise = torch.cuda.FloatTensor(hidden[0].size()).normal_(0, sigma) 
+            self.model.decoder.state["hidden"] = (hidden[0] + random_noise, hidden[1])
 
         # Generator forward.
         if not self.copy_attn:
