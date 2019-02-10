@@ -240,7 +240,7 @@ class Translator(object):
         for num, batch in enumerate(data_iter):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
-            input = ["" for i in range(batch.batch_size)]
+            inputs = ["" for i in range(batch.batch_size)]
             preds = [[] for i in range(batch.batch_size)]
             scores = [[] for i in range(batch.batch_size)]
             for i in range(self.beam_iters):
@@ -265,7 +265,7 @@ class Translator(object):
                     ## Saves predictions and scores into dictionary 
                     ## to be added to final results later
 
-                    input[j] = trans.src_raw
+                    inputs[j] = trans.src_raw
                     if self.beam_iters == 1:
                         preds[j] = trans.pred_sents[:self.n_best]
                         scores[j] = [float(x) for x in trans.pred_scores[:self.n_best]]
@@ -277,8 +277,6 @@ class Translator(object):
                         preds[j] += [trans.pred_sents[k]]
                         scores[j] += [float(trans.pred_scores[k])]
                         
-
-
                     if self.verbose:
                         sent_number = next(counter)
                         output = trans.log(sent_number)
@@ -308,11 +306,10 @@ class Translator(object):
                             row_format = "{:>10.10} " + "{:>10.7f} " * len(srcs)
                         os.write(1, output.encode('utf-8'))
 
-
-            # Adds output to json_dump
-            for j in range(batch_size):
+            assert len(inputs) == len(preds) == len(scores)
+            for j in range(len(inputs)):
                 results.append({
-                    'input': input[j],
+                    'input': inputs[j],
                     'pred': preds[j],
                     'scores': scores[j]
                 })
@@ -586,7 +583,12 @@ class Translator(object):
         hidden = self.model.decoder.state["hidden"]
 
         sigma = self.hidden_state_noise / (step+1)
-        random_noise = torch.cuda.FloatTensor(hidden[0].size()).normal_(0, sigma) 
+        # TODO(dei): Figure out how to get this to work without the if statement.
+        if self.cuda:
+          random_noise = torch.cuda.FloatTensor(hidden[0].size()).normal_(0, sigma) 
+        else:
+          random_noise = torch.FloatTensor(hidden[0].size()).normal_(0, sigma) 
+
         self.model.decoder.state["hidden"] = (hidden[0] + random_noise, hidden[1])
 
         # Generator forward.
