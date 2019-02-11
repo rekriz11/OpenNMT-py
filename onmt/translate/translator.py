@@ -258,7 +258,11 @@ class Translator(object):
                     pred_sents = trans.pred_sents[:self.n_best]
                     all_scores += [pred_scores]
 
-                    score = np.mean([s / len(l) for s, l in zip(pred_scores, pred_sents)])
+                    score = np.mean([s / len(l) for s, l in zip(pred_scores, pred_sents) 
+                                    if len(l) > 0])
+                    if 0 in [len(l) for l in pred_sents]:
+                        print('Warning: (batch=%d, translation=%d) generated an empty sequence'
+                                % (num, j))
                     pred_score_total.append(score)
                     if tgt is not None:
                         gold_score_total.append(
