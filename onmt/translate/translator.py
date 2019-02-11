@@ -227,8 +227,9 @@ class Translator(object):
 
         # Statistics
         counter = count(1)
-        pred_score_total, pred_words_total = 0, 0
-        gold_score_total, gold_words_total = 0, 0
+
+        pred_score_total = []    
+        gold_score_total = []
 
         all_scores = []
         all_predictions = []
@@ -237,29 +238,33 @@ class Translator(object):
 
         # TODO(daphne): Figure out why putting import at top of the file fails.
         import json
+        # Iterating over batches.
         for num, batch in enumerate(data_iter):
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
             inputs = ["" for i in range(batch.batch_size)]
             preds = [[] for i in range(batch.batch_size)]
             scores = [[] for i in range(batch.batch_size)]
+            # If doing iterative beam search, may run beam search multiple times.
             for i in range(self.beam_iters):
                 batch_data = self.translate_batch(
                     batch, data, attn_debug, builder, fast=self.fast,
                 )
                 translations = builder.from_batch(batch_data)
 
+                # Iterate over examples in the batch.
                 for j, trans in enumerate(translations):
-                    all_scores += [trans.pred_scores[:self.n_best]]
-                    pred_score_total += trans.pred_scores[0].double().cuda()
+                    pred_scores = list(float(s) for s in trans.pred_scores[:self.n_best])
+                    pred_sents = trans.pred_sents[:self.n_best]
+                    all_scores += [pred_scores]
 
-                    pred_words_total += len(trans.pred_sents[0])
+                    score = np.mean([s / len(l) for s, l in zip(pred_scores, pred_sents)])
+                    pred_score_total.append(score)
                     if tgt is not None:
-                        gold_score_total += trans.gold_score
-                        gold_words_total += len(trans.gold_sent) + 1
+                        gold_score_total.append(
+                            trans.gold_score / float(len(trans.gold_sent)))
 
-                    n_best_preds = [" ".join(pred)
-                                    for pred in trans.pred_sents[:self.n_best]]
+                    n_best_preds = [" ".join(pred) for pred in pred_sents]
                     all_predictions += [n_best_preds]
 
                     ## Saves predictions and scores into dictionary 
@@ -267,12 +272,12 @@ class Translator(object):
 
                     inputs[j] = trans.src_raw
                     if self.beam_iters == 1:
-                        preds[j] = trans.pred_sents[:self.n_best]
-                        scores[j] = [float(x) for x in trans.pred_scores[:self.n_best]]
+                        preds[j] = pred_sents
+                        scores[j] = pred_scores
                     else:
                         ## Checks if top candidate is empty (TODO: why is this happening?)
                         k = 0
-                        while trans.pred_sents[k] == []:
+                        while not trans.pred_sents[k]:
                             k += 1 
                         preds[j] += [trans.pred_sents[k]]
                         scores[j] += [float(trans.pred_scores[k])]
@@ -317,22 +322,20 @@ class Translator(object):
         # Save the results to json.
         json_dump = {
           'results': results,
-          'score': float(pred_score_total / pred_words_total),
-          'ppl': math.exp(-pred_score_total / pred_words_total)
+          'score': np.mean(pred_score_total),
+          'ppl': math.exp(-np.mean(pred_score_total))
         }
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
 
         if self.report_score:
-            msg = self._report_score('PRED', pred_score_total,
-                                     pred_words_total)
+            msg = self._report_score('PRED', json_dump['score'], 1)
             if self.logger:
                 self.logger.info(msg)
             else:
                 print(msg)
             if tgt is not None:
-                msg = self._report_score('GOLD', gold_score_total,
-                                         gold_words_total)
+                msg = self._report_score('GOLD', json_dump['score'], 1)
                 if self.logger:
                     self.logger.info(msg)
                 else:
@@ -1021,15 +1024,9 @@ class Translator(object):
     ## Converts current beam in human-readable format
     def debug_translation(self, batch_data, builder, fins):
         translations = builder.from_batch(batch_data)
-        all_scores = []
         all_predictions = []
-        pred_score_total, pred_words_total = 0, 0
 
         for trans in translations:
-            all_scores += [trans.pred_scores[:self.beam_size]]
-            pred_score_total += trans.pred_scores[0]
-            pred_words_total += len(trans.pred_sents[0])
-
             n_best_preds = [" ".join(pred)
                             for pred in trans.pred_sents[:self.beam_size]]
             all_predictions += [n_best_preds]
