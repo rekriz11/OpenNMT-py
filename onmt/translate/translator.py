@@ -228,8 +228,10 @@ class Translator(object):
         # Statistics
         counter = count(1)
 
-        pred_score_total = []    
-        gold_score_total = []
+        pred_score_total = 0 
+        gold_score_total = 0
+        pred_count = 0
+        gold_count = 0
 
         all_scores = []
         all_predictions = []
@@ -258,15 +260,14 @@ class Translator(object):
                     pred_sents = trans.pred_sents[:self.n_best]
                     all_scores += [pred_scores]
 
-                    score = np.mean([s / len(l) for s, l in zip(pred_scores, pred_sents) 
-                                    if len(l) > 0])
                     if 0 in [len(l) for l in pred_sents]:
                         print('Warning: (batch=%d, translation=%d) generated an empty sequence'
                                 % (num, j))
-                    pred_score_total.append(score)
+                    pred_score_total += sum(pred_scores)
+                    pred_count += sum(len(s) for s in pred_sents)
+
                     if tgt is not None:
-                        gold_score_total.append(
-                            trans.gold_score / float(len(trans.gold_sent)))
+                      raise ValueError('tgt not currently supported.')
 
                     n_best_preds = [" ".join(pred) for pred in pred_sents]
                     all_predictions += [n_best_preds]
@@ -326,8 +327,8 @@ class Translator(object):
         # Save the results to json.
         json_dump = {
           'results': results,
-          'score': np.mean(pred_score_total),
-          'ppl': math.exp(-np.mean(pred_score_total))
+          'score': pred_score_total / pred_count,
+          'ppl': math.exp(-pred_score_total / pred_count)
         }
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
