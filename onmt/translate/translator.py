@@ -98,7 +98,6 @@ class Translator(object):
         self.sample_from_topk = opt.random_sampling_topk
         self.num_random_samples = opt.num_random_samples
         if self.num_random_samples > 1:
-          print('Setting n_best to num_random_samples')
           self.n_best = self.num_random_samples
         self.hidden_state_noise = opt.hidden_state_noise
         self.do_stochastic_beam = opt.stochastic_beam
@@ -228,9 +227,6 @@ class Translator(object):
         # Statistics
         counter = count(1)
 
-        pred_score_total = []    
-        gold_score_total = []
-
         all_scores = []
         all_predictions = []
 
@@ -258,15 +254,13 @@ class Translator(object):
                     pred_sents = trans.pred_sents[:self.n_best]
                     all_scores += [pred_scores]
 
-                    score = np.mean([s / len(l) for s, l in zip(pred_scores, pred_sents) 
-                                    if len(l) > 0])
                     if 0 in [len(l) for l in pred_sents]:
                         print('Warning: (batch=%d, translation=%d) generated an empty sequence'
                                 % (num, j))
-                    pred_score_total.append(score)
+
                     if tgt is not None:
-                        gold_score_total.append(
-                            trans.gold_score / float(len(trans.gold_sent)))
+                      #TODO(dei): Add back support for this.
+                      raise ValueError('tgt not currently supported.')
 
                     n_best_preds = [" ".join(pred) for pred in pred_sents]
                     all_predictions += [n_best_preds]
@@ -323,11 +317,18 @@ class Translator(object):
                     'scores': scores[j]
                 })
 
+        # Compute overall per-token perplexity.
+        pred_score_total = 0
+        pred_token_total = 0
+        for result in results:
+          pred_score_total += sum(result['scores']) 
+          pred_token_total += sum(len(s) for s in result['pred']) 
+
         # Save the results to json.
         json_dump = {
           'results': results,
-          'score': np.mean(pred_score_total),
-          'ppl': math.exp(-np.mean(pred_score_total))
+          'score': pred_score_total / pred_token_count,
+          'ppl': math.exp(-pred_score_total / pred_token_count)
         }
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
