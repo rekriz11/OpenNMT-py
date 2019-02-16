@@ -327,8 +327,8 @@ class Translator(object):
         # Save the results to json.
         json_dump = {
           'results': results,
-          'score': pred_score_total / pred_token_count,
-          'ppl': math.exp(-pred_score_total / pred_token_count)
+          'score': pred_score_total / pred_token_total,
+          'ppl': math.exp(-pred_score_total / pred_token_total)
         }
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
@@ -455,6 +455,15 @@ class Translator(object):
                 [batch_size, 1], start_token, dtype=torch.long, device=mb_device)
             alive_attn = None
 
+            seq_log_probs = torch.zeros([batch_size, 1], device=mb_device)
+
+            if self.cuda:
+                is_finished = torch.zeros(
+                    [batch_size, 1], dtype=torch.float32, device="cuda")
+            else:
+                is_finished = torch.zeros(
+                    [batch_size, 1], dtype=torch.float32, device="cpu")
+
             for step in range(max_length):
                 decoder_input = seq_so_far[:, -1].view(1, -1, 1)
 
@@ -476,6 +485,10 @@ class Translator(object):
                 topk_ids, topk_scores = self.sample_with_temperature(
                         log_probs, sampling_temp, keep_topk)
 
+                # Don't include log probabilities from after end of sequence.
+                seq_log_probs += torch.mul(topk_scores, 1 - is_finished)
+                is_finished = torch.max(is_finished, topk_ids.eq(end_token).float())
+
                 # Append last prediction.
                 seq_so_far = torch.cat([seq_so_far, topk_ids.view(-1, 1)], -1)
                 if return_attention:
@@ -494,7 +507,7 @@ class Translator(object):
             for i in range(topk_scores.size(0)):
                 # Store finished hypotheses for this batch. Unlike in beam search,
                 # there will only ever be 1 hypothesis per example.
-                score = topk_scores[i, 0]
+                score = seq_log_probs[i, 0]
                 pred = predictions[i, 0, 1:]  # Ignore start_token.
                 m_len = memory_lengths[i]
                 attn = attention[:, i, 0, :m_len] if attention is not None else []
@@ -746,7 +759,6 @@ class Translator(object):
             else:
                 topk_scores, topk_ids = curr_scores.topk(beam_size, dim=-1)
 
-            # import pdb; pdb.set_trace()
             # Recover log probs.
             topk_log_probs = topk_scores * length_penalty
 
