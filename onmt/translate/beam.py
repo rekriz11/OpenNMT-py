@@ -136,12 +136,12 @@ class Beam(object):
             # Don't let EOS have children.
             for i in range(self.next_ys[-1].size(0)):
                 if self.next_ys[-1][i] == self._eos:
-                    beam_scores[i] = -1e21
+                    beam_scores[i] = -1e20
 
             # Force the response to not be empty
             if current_step == 1:
                 for k in range(len(word_probs)):
-                    word_probs[k][self._eos] = -1e22
+                    word_probs[k][self._eos] = -1e20
 
             # Block ngram repeats
             if self.block_ngram_repeat > 0:
@@ -163,7 +163,7 @@ class Beam(object):
                             fail = True
                         ngrams.add(tuple(gram))
                     if fail:
-                        beam_scores[j] = -10e23
+                        beam_scores[j] = -1e21
         else:
             beam_scores = word_probs[0]
         flat_beam_scores = beam_scores.view(-1)
@@ -478,6 +478,7 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
@@ -491,6 +492,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
+            '''
 
             ## Removes all candidates already found in a previous beam search
             scores_temp = []
@@ -521,6 +523,7 @@ class Beam(object):
             prev_k = torch.from_numpy(np.array(prev_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array(next_k_temp, dtype='int32')).type(torch.LongTensor).cuda()
 
+            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER ITERATIVE BEAM SEARCH: ")
             for i in range(len(prev_k)):
@@ -534,6 +537,7 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             #######
+            '''
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
