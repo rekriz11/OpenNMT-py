@@ -325,7 +325,7 @@ class Translator(object):
             pred_token_total += sum(len(s) for s in result['pred']) 
 
         try:
-            score = pred_score_total / pred_token_total,
+            score = pred_score_total / pred_token_total
             ppl = math.exp(-pred_score_total / pred_token_total)
         except Exception as e:
             print(e)
