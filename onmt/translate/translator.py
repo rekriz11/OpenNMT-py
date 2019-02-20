@@ -280,7 +280,7 @@ class Translator(object):
                         while not trans.pred_sents[k]:
                             k += 1
 
-                        print(trans.pred_sents[k] + "\t" + str(float(trans.pred_scores[k])))
+                        print(str(trans.pred_sents[k]) + "\t" + str(float(trans.pred_scores[k])))
                         preds[j] += [trans.pred_sents[k]]
                         scores[j] += [float(trans.pred_scores[k])]
                         
