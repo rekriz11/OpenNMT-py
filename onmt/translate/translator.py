@@ -236,7 +236,6 @@ class Translator(object):
         import json
         # Iterating over batches.
         for num, batch in enumerate(data_iter):
-            print("BATCH: " + str(num))
             ## Reinitialize previous hypotheses
             self.prev_hyps = []
             inputs = ["" for i in range(batch.batch_size)]
@@ -244,7 +243,6 @@ class Translator(object):
             scores = [[] for i in range(batch.batch_size)]
             # If doing iterative beam search, may run beam search multiple times.
             for i in range(self.beam_iters):
-                print("BEAM ITERATION:" + str(i))
                 batch_data = self.translate_batch(
                     batch, data, attn_debug, builder, fast=self.fast,
                 )
@@ -280,7 +278,6 @@ class Translator(object):
                         while not trans.pred_sents[k]:
                             k += 1
 
-                        print(str(trans.pred_sents[k]) + "\t" + str(float(trans.pred_scores[k])))
                         preds[j] += [trans.pred_sents[k]]
                         scores[j] += [float(trans.pred_scores[k])]
                         
