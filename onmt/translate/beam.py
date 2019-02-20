@@ -136,12 +136,12 @@ class Beam(object):
             # Don't let EOS have children.
             for i in range(self.next_ys[-1].size(0)):
                 if self.next_ys[-1][i] == self._eos:
-                    beam_scores[i] = -1e20
+                    beam_scores[i] = -1e21
 
             # Force the response to not be empty
             if current_step == 1:
                 for k in range(len(word_probs)):
-                    word_probs[k][self._eos] = -10e20
+                    word_probs[k][self._eos] = -1e22
 
             # Block ngram repeats
             if self.block_ngram_repeat > 0:
@@ -163,7 +163,7 @@ class Beam(object):
                             fail = True
                         ngrams.add(tuple(gram))
                     if fail:
-                        beam_scores[j] = -10e20
+                        beam_scores[j] = -10e23
         else:
             beam_scores = word_probs[0]
         flat_beam_scores = beam_scores.view(-1)
