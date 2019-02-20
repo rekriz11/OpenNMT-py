@@ -473,7 +473,7 @@ class Beam(object):
                 self.eos_top = True
 
         ## ITERATIVE BEAM SEARCH CODE
-        elif self.prev_hyps != []:
+        elif self.prev_hyps != [] and current_step == 0:
             scores, scores_id = flat_beam_scores.sort(0, descending=True)
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
