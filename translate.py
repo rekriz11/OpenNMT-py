@@ -8,9 +8,12 @@ from onmt.utils.logging import init_logger
 from onmt.translate.translator import build_translator
 
 import onmt.opts as opts
-
+import os
 
 def main(opt):
+    if os.path.exists(opt.output):
+        print('SKIPPING: %s already exists.' % opt.output)
+        exit(0)
     translator = build_translator(opt, report_score=True)
     translator.translate(
         src=opt.src,
