@@ -321,15 +321,23 @@ class Translator(object):
         pred_score_total = 0
         pred_token_total = 0
         for result in results:
-          pred_score_total += sum(result['scores']) 
-          pred_token_total += sum(len(s) for s in result['pred']) 
+            pred_score_total += sum(result['scores']) 
+            pred_token_total += sum(len(s) for s in result['pred']) 
+
+        try:
+            score = pred_score_total / pred_token_total,
+            ppl = math.exp(-pred_score_total / pred_token_total)
+        except Exception as e:
+            print(e)
+            print('WARNING: SCORE AND PPL WERE COMPUTED DUE TO NUMERICAL ERRORS')
+            score = np.nan
+            ppl = np.nan
 
         # Save the results to json.
         json_dump = {
-          'results': results,
-          'score': pred_score_total / pred_token_total,
-          'ppl': math.exp(-pred_score_total / pred_token_total)
-        }
+            'results': results,
+            'score': score,
+            'ppl': ppl}
         json.dump(json_dump, self.out_file)
         self.out_file.flush()
 
