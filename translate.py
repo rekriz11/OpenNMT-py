@@ -13,6 +13,7 @@ import os
 def main(opt):
     if os.path.exists(opt.output):
         print('SKIPPING: %s already exists.' % opt.output)
+        exit(0)
     translator = build_translator(opt, report_score=True)
     translator.translate(
         src=opt.src,
