@@ -278,11 +278,17 @@ class Beam(object):
                 current_beam = current_beam_str[prev_k[i]].split(" ") + self.vocab.itos[next_k[i].items()]
                 c = 0
 
+                ## Gets word count of candidate
                 for tok in current_beam:
-                    ## Gets word count of generated token
                     try:
-                        c = word_counts[tok]
-                        word_counts[tok] += 1
+                        c += word_counts[tok]
+                    except KeyError:
+                        continue
+                
+                ## Updates counts for next candidate
+                for tok in current_beam:
+                    try:
+                        words_counts[tok] += 1
                     except KeyError:
                         word_counts[tok] = 1
 
