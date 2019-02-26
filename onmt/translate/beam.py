@@ -275,7 +275,7 @@ class Beam(object):
 
             ## Penalizes for word overlaps
             for i in indices:
-                current_beam = current_beam_str[prev_k[i]].split(" ") + self.vocab.itos[next_k[i].items()]
+                current_beam = current_beam_str[prev_k[i]].split(" ") + self.vocab.itos[next_k[i].item()]
                 c = 0
 
                 ## Gets word count of candidate
