@@ -249,21 +249,16 @@ class Beam(object):
             prev_k = scores_id / num_words
             next_k = scores_id - prev_k * num_words
 
-            '''
             #### FOR DEBUGGING (DELETE LATER)
             print("\nORIGINAL BEAM: ")
             for i in range(self.size):
-                if current_step == 0:
-                    toks = ["\t", self.vocab.itos[next_k[i].item()]]
-                else:
-                    toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
+                toks = current_beam_str[prev_k[i]].split(" ") + ["\t", self.vocab.itos[next_k[i].item()]]
                 ind = next_k[i].item()   
                 try:
                     print(" ".join(toks) + "\t" + str(ind) + "\t" + str(scores[i].item()))
                 except UnicodeEncodeError:
                     continue
             ####
-            '''
 
             ## Only consider beam_size x beam_size candidates
             indices = []
@@ -278,15 +273,18 @@ class Beam(object):
             next_k_temp = []
             scores_orig = []
 
+            ## Penalizes for word overlaps
             for i in indices:
-                ## Gets word count of generated token
-                tok = self.vocab.itos[next_k[i].item()]
-                try:
-                    c = word_counts[tok]
-                    word_counts[tok] += 1
-                except KeyError:
-                    c = 0
-                    word_counts[tok] = 1
+                current_beam = current_beam_str[prev_k[i]].split(" ") + self.vocab.itos[next_k[i].items()]
+                c = 0
+
+                for tok in current_beam:
+                    ## Gets word count of generated token
+                    try:
+                        c = word_counts[tok]
+                        word_counts[tok] += 1
+                    except KeyError:
+                        word_counts[tok] = 1
 
                 scores_temp.append(scores[i] - self.hamming_penalty*c)
                 scores_orig.append(scores[i])
@@ -299,7 +297,6 @@ class Beam(object):
             prev_k = torch.from_numpy(np.array([prev_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
             next_k = torch.from_numpy(np.array([next_k_temp[i].item() for i in scores_id], dtype='int32')).type(torch.LongTensor).cuda()
 
-            '''
             ####### FOR DEBUGGING (DELETE LATER)
             print("\nBEAM AFTER DIVERSE BEAM SEARCH")
             for i in range(self.size):
@@ -313,7 +310,6 @@ class Beam(object):
                 except UnicodeEncodeError:
                     continue
             ####
-            '''
 
             self.all_scores.append(self.scores)
             self.scores = best_scores
