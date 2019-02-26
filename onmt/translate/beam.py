@@ -288,7 +288,7 @@ class Beam(object):
                 ## Updates counts for next candidate
                 for tok in current_beam:
                     try:
-                        words_counts[tok] += 1
+                        word_counts[tok] += 1
                     except KeyError:
                         word_counts[tok] = 1
 
