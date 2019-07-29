@@ -1,4 +1,4 @@
-## DeDiv Notes
+# DeDiv
 
 This is the fork of the OpenNMT-py github repository which is compatible with the DeDiv github repository for the paper, [Comparison of Diverse Decoding Methods from Conditional Language Models](https://arxiv.org/abs/1906.06362).
 
